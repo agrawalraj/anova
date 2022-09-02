@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+# Ignore scratch folder
+scratch/
+
+.DS_Store
+
 # Distribution / packaging
 .Python
 build/
