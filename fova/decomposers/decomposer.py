@@ -21,7 +21,7 @@ class Decomposer(ABC):
 		self.f = f # Regression function
 
 	@abstractmethod
-	def fit_decomposition(self):
+	def fit(self):
 		pass
 
 	@abstractmethod
