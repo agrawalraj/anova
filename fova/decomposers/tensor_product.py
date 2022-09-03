@@ -3,15 +3,87 @@
 TODO: say what this does
 """
 
-import jax as np
+import jax as jnp
 from fova.decomposer import Decomposer
+from fova.utils import all_subsets
+
+# Product measure, job done at specifying fdbasis
+
+class TensorProductKernelANOVA(Decomposer):
+	# Just run kernel ridge regression
+	def __init__(self, k_theta, alpha):
+		# TODO: k_theta - needs to be a model selection kernel
+		self.__k_theta = k_theta
+		self.__kernels1d = k_theta.kernels1d
+		self.__Q = k_theta.Q
+		self.__alpha = alpha
+
+	def get_effect(self, X_train, X, V):
+		""" 
+
+		References: Lemma 2 from
+		https://arxiv.org/pdf/2106.12408.pdf 
+	    Attributes
+	    ----------
+	    X_train : jax ndarray
+	        	  Fitted regression function with a predict() method
+	    """
+	   	alpha = self.__alpha
+	   	k_theta = self.__k_theta
+	    kernels1d = self.__kernels1d
+	    if len(V) == 0: # Constant / intercept term
+	    	k_intercept = k_theta.intercept_kernel # Kernel for intercept term
+	    	return alpha.sum() * k_intercept * jnp.ones(X.shape[0])
+		else:
+			kernel_matrix = 1. 
+			for covariate_ix in V:
+				Xi = X[:, covariate_ix]
+				Xi_train = X_train[:, covariate_ix]
+				kernel_matrix *= kernels1d.kernel_matrix(Xi, Xi_train)
+			return kernel_matrix.dot(alpha)
+
+	def get_decomposition(self, X_train, X, max_effects=1e4):
+		p = X_train.shape[0]
+		Q = self.__Q
+		V_all = all_subsets(p, Q)
+		num_effects = len(V_all)
+		assert num_effects > max_effects, f"{num_effects} effects exceeds threshold"
+		decomposition = dict()
+		for V in V_all:
+			f_V = self.get_effect(X_train, X, V)
+			decomposition[V] = f_V
+		return decomposition
 
 
-class TensorProductANOVA(Decomposer):
+
+class FiniteBasisANOVA(Decomposer):
 
 	# Need 1-dimensional basis functions
-	def fit(self, basis, measure):
-		# TODO: assert basis type is of XYZ
+	def fit(self, fdbasis, mu_project, mu_target, samp_dim_ratio=10, 
+			max_samps=1e6):
+		f = self.f
+		basis_dim = fdbasis.dimension
+		Q = fdbasis.Q
+		N_project = basis_dim * samp_dim_ratio # TOOD: if mu_project is empirical distribution, should throw error if exceeds
+		assert N_project < max_samps, "Too many samples. Chance ratio or increase threshold" # TODO: throw better error message
+		X_raw = mu_project.sample(N_project)
+		Y = f.predict(X_raw)
+		X_feat = fdbasis.transform(X_raw)
+		theta_ridge = RidgeRegression(X_feat, Y)
 
+		# TODO: assert basis type is of XYZ
+		f = self.f
+
+
+		# Approximate f in a finite dimensional product space 
+
+
+# Don't extrapolate outside of training
+	# uniform between min and max of train
+	# get min and max of train - uniform sample x points
+	# then sample points will be tensor
 
 # generate tensor product space
+# basis
+	# fit
+	# featdim
