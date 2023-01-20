@@ -5,12 +5,14 @@ TODO: say what this does
 
 import jax as jnp
 from fova.decomposer import Decomposer
-from fova.utils import all_subsets
+
+# Linear regression coeffs case
 
 # Product measure, job done at specifying fdbasis
 
 class TensorProductKernelANOVA(Decomposer):
 	# Just run kernel ridge regression
+	# TODO: say this only workds for product measure. 
 	def __init__(self, k_theta, alpha):
 		# TODO: k_theta - needs to be a model selection kernel
 		self.__k_theta = k_theta
@@ -32,31 +34,52 @@ class TensorProductKernelANOVA(Decomposer):
 	   	k_theta = self.__k_theta
 	    kernels1d = self.__kernels1d
 	    if len(V) == 0: # Constant / intercept term
-	    	k_intercept = k_theta.intercept_kernel # Kernel for intercept term
+	    	k_intercept = k_theta.intercept() # Value for intercept term
 	    	return alpha.sum() * k_intercept * jnp.ones(X.shape[0])
 		else:
 			kernel_matrix = 1. 
+			theta_V = k_theta.get_theta(V)
 			for covariate_ix in V:
 				Xi = X[:, covariate_ix]
 				Xi_train = X_train[:, covariate_ix]
-				kernel_matrix *= kernels1d.kernel_matrix(Xi, Xi_train)
-			return kernel_matrix.dot(alpha)
-
-	def get_decomposition(self, X_train, X, max_effects=1e4):
-		p = X_train.shape[0]
-		Q = self.__Q
-		V_all = all_subsets(p, Q)
-		num_effects = len(V_all)
-		assert num_effects > max_effects, f"{num_effects} effects exceeds threshold"
-		decomposition = dict()
-		for V in V_all:
-			f_V = self.get_effect(X_train, X, V)
-			decomposition[V] = f_V
-		return decomposition
+				kernel_matrix *= kernels1d.kernel_matrix1D(Xi, Xi_train, 
+													covariate_ix=covariate_ix)
+			return theta_V * kernel_matrix.dot(alpha)
 
 
+class EmpiricalKernelANOVA(Decomposer):
+	def get_effect(self, X_train, X, V, decomposition=None):
+		if decomposition == None:
+			# just return
 
-class FiniteBasisANOVA(Decomposer):
+		# kernels1d should just be tthe raw basis (no skim params)
+
+	def get_decomposition():
+
+
+
+
+
+
+
+
+
+class FiniteTensorBasisANOVA(Decomposer):
+	def __init__(self, fdbasis, theta_fit):
+		# TODO: k_theta - needs to be a model selection kernel
+		self.__fdbasis = fdbasis
+		self.__Q = fdbasis.Q
+		self.__theta_fit = theta_fit
+
+	def get_effect(self, X_train, X, V, mu):
+		pass
+
+
+
+
+
+
+
 
 	# Need 1-dimensional basis functions
 	def fit(self, fdbasis, mu_project, mu_target, samp_dim_ratio=10, 

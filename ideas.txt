@@ -1,0 +1,9 @@
+
+# Direct explanation plugin for sklearn & transformers models
+# Projection onto two way interaction models; can uniform sample between extremes
+# of training to fit
+
+# Other types of responses
+# Covariate shift
+
+# Other types of parameter updates: generalized cross-validation
