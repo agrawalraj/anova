@@ -5,7 +5,6 @@ from tqdm import tqdm
 
 from fova.inference.losses import ridge_stochastic_cv_loss
 from fova.misc.logger import GausLogger
-from fova.misc.scheduler import truncScheduler
 
 
 class SKIMFA(object):
@@ -25,22 +24,22 @@ class SKIMFA(object):
 		hyperparams = hyperparams_init.copy()
 		kernel_params = kernel_params_init.copy()
 		T = opt_params['T'] # Number gradient steps
-		truncScheduler = opt_params['truncScheduler']
+		scheduler = opt_params['scheduler']
 		c = hyperparams['c']
 
 		# Training loop
 		for t in tqdm(range(T)):
 			# Update SKIM-FA kernel parameters
 			key, subkey = random.split(key)
-    		kernel_params = update_kernel(subkey, self.X_train_feat, self.Y_train, 
-    								loss, hyperparams, 
-    								kernel_params, opt_params)
+    		kernel_params = update_kernel(subkey, self.X_train_feat, 
+    										self.Y_train, loss, hyperparams, 
+    										kernel_params, opt_params)
 
 			# Update c
-			hyperparams['c'] = truncScheduler(t, c, kernel_params)
+			hyperparams['c'] = scheduler.update(t, c, kernel_params)
 
-			# Keep track of parameter changes
-			logger.update(t, hyperparams, kernel_params, opt_params, 
+			# Keep track of parameter changes TODO: ADD BACK
+			logger.update(t, loss, hyperparams, kernel_params, opt_params, 
 							self.X_valid_feat, self.Y_valid)
 		
 		end_time = time.time()
@@ -59,7 +58,7 @@ class SKIMFA(object):
 class GaussianSKIMFA(SKIMFA):
 	def fit(
 			self, key, hyperparams_init, kernel_params_init, opt_params, 
-			logger=GausLogger()
+			logger=SKIMLogger()
 		):
 		loss = ridge_stochastic_cv_loss
 		super(GaussianSKIMFA, self).fit(key, loss, hyperparams_init, 
@@ -83,7 +82,10 @@ class GaussianSKIMFA(SKIMFA):
 
 if __name__ == "__main__":
 	from fova.basis.maps import LinearBasis
+	from fova.misc.scheduler import truncScheduler
+	from fova.misc.logger import SKIMLogger
 
 	featprocessor = LinearBasis()
-	logger = 
-	truncScheduler = 
+	scheduler = truncScheduler()
+	logger = GausLogger(100)
+
