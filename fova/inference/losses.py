@@ -4,8 +4,23 @@ from fova.kernels.skim import *
 from ridge_regression import *
 
 
+@jax.jit
 def mean_squared_error(y_pred, y_actual):
 	return jnp.mean(jnp.square(y_pred - y_actual))
+
+
+def fit_predict_new(
+		X_train, Y_train, X_new, Y_new, hyperparams, kernel_params, opt_params
+	):
+	c = hyperparams['c']
+	sigma_sq = hyperparams['sigma_sq']
+	K_XX = kernel_matrix(X_train, X[train_indcs, :], c, kernel_params)
+	K_ZX = kernel_matrix(X_new, X_train, c, kernel_params)
+
+	alpha_hat = kernel_ridge(K_XX, Y_train, sigma_sq, opt_params)
+	Y_pred = ridge_predict(K_ZX, alpha_hat)
+
+	return mean_squared_error(Y_pred_cv, Y_new), alpha_hat
 
 
 def ridge_stochastic_cv_loss(key, X, Y, hyperparams, kernel_params, opt_params):
@@ -17,17 +32,8 @@ def ridge_stochastic_cv_loss(key, X, Y, hyperparams, kernel_params, opt_params):
 	jax.random.permutation(key, indcs, axis=0)
 	train_indcs = indcs[:(N - M)]
 	cv_indcs = indcs[(N - M):]
-
-	c = hyperparams['c']
-	sigma_sq = hyperparams['sigma_sq']
-	K_XX = kernel_matrix(X[train_indcs, :], X[train_indcs, :], c, kernel_params)
-	K_ZX = kernel_matrix(X[cv_indcs, :], X[train_indcs, :], c, kernel_params)
-
-	alpha_hat = kernel_ridge(K_XX, Y[train_indcs], sigma_sq, opt_params)
-	Y_pred_cv = ridge_predict(K_ZX, alpha_hat)
-	Y_true_cv = Y[cv_indcs]
-
-	return mean_squared_error(Y_pred_cv, Y_true_cv)
+	return fit_predict_new(X[train_indcs, :], Y[train_indcs], X[cv_indcs, :], 
+			Y[cv_indcs], hyperparams, kernel_params, opt_params)[0]
 
 
 def update_kernel(key, X, Y, loss, hyperparams, kernel_params, opt_params):
