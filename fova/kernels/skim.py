@@ -56,9 +56,7 @@ def skim_fa_kernel(x, z, c, kernel_params):
     for q in range(1, Q+1):
         kernel_hat_cache[q] = 0.
         for s in range(1, q+1):
-            kernel_hat_cache[q] += 1/q * (-1)**(s+1) 
-                                    * kernel_hat_cache[q-s] 
-                                    * kernel_spower_cache[s]
+            kernel_hat_cache[q] += 1/q * (-1)**(s+1) * kernel_hat_cache[q-s] * kernel_spower_cache[s]
     
     # Compute SKIM-FA kernel from cached kernels
     k_skim_fa = 0.

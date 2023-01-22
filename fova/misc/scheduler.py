@@ -27,6 +27,8 @@ class truncScheduler(object):
 		self.states = []
 
 	def update(self, t, c, kernel_params, **kwargs):
+		if t == 0:
+			self.states.append(c)
 		c_prev = self.states[-1]
 		U_tilde = kernel_params['U_tilde']
 		c = trunc_scheduler_helper(t, U_tilde, c_prev, **kwargs)
