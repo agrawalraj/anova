@@ -15,7 +15,7 @@ class TensorProductKernelANOVA(Decomposer):
         kappa = get_kappa(self.kernel_params['U_tilde'], self.hyperparams['c'])
         alpha = self.alpha
         if len(V) == 0: # Constant / intercept term
-            return eta[0] * jnp.ones(X_feat.shape[0])
+            return eta[0] * alpha.sum() * jnp.ones(X_feat.shape[0])
         else:
             X_train_feat = self.X_train_feat
             q = len(V)
@@ -24,3 +24,21 @@ class TensorProductKernelANOVA(Decomposer):
             kernel_fn = lambda x, z: kernel_V(x, z, V)
             K_ZX = kernel_matrix(X_feat, X_train_feat, kernel_fn)
             return theta_V * ridge_predict(K_ZX, alpha)
+
+
+class LinearANOVA(TensorProductKernelANOVA):
+    def get_coef(self, V):
+        if len(set(V) - set(self.selected_covs)) > 0:
+            return 0.
+        assert self.p == self.X_train_feat.shape[1], 'Not linear model!'
+        
+        X_probe = jnp.zeros((1, self.p, 1))
+        if len(V) == 0:
+            return self.get_effect(X_probe, V).item()
+
+        # f_V(x_v) = \theta_V \prod_{i \in V} x_i
+        # Set \prod_{i \in V} x_i = 1 by setting x_i = 1
+        # Then, f_V(x_v at probe) = theta_V
+        X_probe = X_probe.at[:, jnp.array(V)].set(1.)
+        f_V = self.get_effect(X_probe, V)
+        return f_V.item()

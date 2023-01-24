@@ -8,7 +8,7 @@ from fova.inference.fit import GaussianSKIMFA
 from fova.basis.maps import LinearBasis
 from fova.misc.scheduler import truncScheduler
 from fova.misc.logger import GausLogger
-from fova.decomposers.tensor_product import TensorProductKernelANOVA
+from fova.decomposers.tensor_product import TensorProductKernelANOVA, LinearANOVA
 
 # Generate random data
 key = random.PRNGKey(0)
@@ -57,5 +57,22 @@ decompose = TensorProductKernelANOVA(skim)
 
 anova = decompose.get_decomposition(X_train)
 
-print(anova)
+for V, effect in anova.items():
+	print(V, round(effect.var(), 3))
+
+print('\n')
+
+lanova = LinearANOVA(skim)
+
+for V, effect in anova.items():
+	print(V, round(lanova.get_coef(V), 3))
+
+
+X_train_feat = skim.X_train_feat
+check1_linear = lanova.get_coef([2, 3]) * X_train_feat[:, 2, 0] * X_train_feat[:, 3, 0]
+check1_kernel = anova[(2, 3)]
+
+print(jnp.abs(check1_linear - check1_kernel).sum())
+
+
 

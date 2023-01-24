@@ -54,7 +54,6 @@ class Decomposer(ABC):
         decomposition = dict()
         X_feat = self.featprocessor.transform(X)
         for V in tqdm(list(V_all)):
-            print(list(V))
             f_V = self.get_effect(X_feat, list(V))
             decomposition[V] = f_V
         return decomposition
