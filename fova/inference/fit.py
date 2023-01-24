@@ -1,15 +1,19 @@
 
 import time
+import jax.numpy as jnp
+
+from tqdm import tqdm
 from math import floor
 from jax import random
 
 from fova.inference.losses import ridge_stochastic_cv_loss, update_kernel
 from fova.misc.logger import GausLogger
+from fova.kernels.skim import skim_kernel_matrix, get_kappa
 
 
 class SKIMFA(object):
     def __init__(self, X_train, Y_train, X_valid, Y_valid, featprocessor):
-        self.p = X_train.shape[0] # Number of covariates
+        self.p = X_train.shape[1] # Number of covariates
         self.X_train_feat = featprocessor.transform(X_train)
         self.Y_train = Y_train
         self.X_valid_feat = featprocessor.transform(X_valid)
@@ -28,7 +32,7 @@ class SKIMFA(object):
         c = hyperparams['c']
 
         # Training loop
-        for t in range(T):
+        for t in tqdm(range(T)):
             # Update SKIM-FA kernel parameters
             key, subkey = random.split(key)
             kernel_params = update_kernel(subkey, self.X_train_feat, 
@@ -66,11 +70,10 @@ class GaussianSKIMFA(SKIMFA):
         K = skim_kernel_matrix(X_test_feat, self.X_train_feat, c, kernel_params)
         return ridge_predict(K, alpha)
 
-    @property
     def selected_covariates(self):
         hyperparams, kernel_params, __ = self.logger.get_final_params()
-        kappa = get_kappa(kernel_params['U_tilde'], c)
-        return list(jnp.where(kappa > 0)[0])
+        kappa = get_kappa(kernel_params['U_tilde'], hyperparams['c'])
+        return sorted(jnp.where(kappa > 0)[0].tolist())
 
 
 if __name__ == "__main__":

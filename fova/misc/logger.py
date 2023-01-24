@@ -16,14 +16,15 @@ class GausLogger(object):
 			self, t, loss, hyperparams, kernel_params, opt_params, 
 			X_train_feat, Y_train, X_valid_feat, Y_valid
 		):
-		print('='*30 + f" Iteration {t}/{opt_params['T']} " + '='*30)
-		
-		c = hyperparams['c']
-		kappa = get_kappa(kernel_params['U_tilde'], c)
-		n_selected = len(jnp.where(kappa > 0)[0])
-		print(f'There are {n_selected} selected.')
 
 		if t % self.freq == 0:
+			print('='*30 + f" Iteration {t}/{opt_params['T']} " + '='*30)
+		
+			c = hyperparams['c']
+			kappa = get_kappa(kernel_params['U_tilde'], c)
+			n_selected = len(jnp.where(kappa > 0)[0])
+			print(f'There are {n_selected} covariates selected.')
+
 			# Compute loss
 			mse, alpha_hat = fit_predict_new(X_train_feat, Y_train, X_valid_feat, 
 								Y_valid, hyperparams, kernel_params, opt_params)
@@ -31,6 +32,7 @@ class GausLogger(object):
 
 			# Print MSE
 			print(f'MSE (Validation)={mse}.')
+			print(f'R2 (Validation)={1 - mse/Y_valid.var()}.')
 
 			# Cache parameters
 			self.all_alpha.append(alpha_hat)

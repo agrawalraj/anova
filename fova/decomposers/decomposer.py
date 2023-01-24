@@ -5,15 +5,16 @@ TODO: say what this does
 
 from abc import ABC
 import jax.numpy as jnp
+from tqdm import tqdm
 from itertools import chain, combinations
 
 
 def all_subsets(selected, q, include_lower=True):
     s = list(selected)
     if include_lower:
-        return chain.from_iterable(combinations(s, r) for r in range(q+1))
+        return list(chain.from_iterable(combinations(s, r) for r in range(q+1)))
     else:
-        return combinations(s, q)
+        return list(combinations(s, q))
 
 
 class Decomposer(ABC):
@@ -21,7 +22,6 @@ class Decomposer(ABC):
     """Abstract class for decomposing a regression function into additive
     and interaction effects.
     """
-
     def __init__(self, model):
         hyperparams, kernel_params, alpha = model.logger.get_final_params()
         self.featprocessor = model.featprocessor
@@ -40,7 +40,7 @@ class Decomposer(ABC):
         assert order <= self.Q, f"Model fit only contains {self.Q} interactions"
         V_order = all_subsets(self.selected_covs, self.Q, False)
         variation = jnp.zeros(X_feat.shape[0])
-        for V in V_order:
+        for V in tqdm(V_order):
             variation += self.get_effect(X_feat, list(V))
         return variation
 
@@ -50,10 +50,11 @@ class Decomposer(ABC):
         V_all = all_subsets(self.selected_covs, self.Q, True)
         num_effects = len(V_all)
         err2_msg = f"{num_effects} larger than {max_effects} effects threshold"
-        assert num_effects > max_effects, err2_msg
+        assert num_effects < max_effects, err2_msg
         decomposition = dict()
         X_feat = self.featprocessor.transform(X)
-        for V in V_all:
+        for V in tqdm(list(V_all)):
+            print(list(V))
             f_V = self.get_effect(X_feat, list(V))
             decomposition[V] = f_V
         return decomposition
@@ -72,7 +73,3 @@ if __name__ == "__main__":
         print([list(e) for e in V_all])
 
     test_all_subsets()
-
-
-
-

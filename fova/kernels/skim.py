@@ -41,6 +41,7 @@ def kernel_pow_s(x, z, kappa, s):
 
 @jax.jit
 def kernel_V(x, z, V):
+    V = jnp.array(V)
     mapped_kernel = vmap(kernel_pow_s_1d, in_axes=(0, 0, None, None))
     return jnp.prod(mapped_kernel(x[V], z[V], 1., 1))
 
