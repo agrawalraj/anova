@@ -10,6 +10,7 @@ from fova.misc.scheduler import truncScheduler
 from fova.misc.logger import GausLogger
 
 
+# Generate random data
 key = random.PRNGKey(0)
 N = 200
 p = 5

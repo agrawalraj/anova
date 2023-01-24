@@ -14,8 +14,8 @@ def fit_predict_new(
 	):
 	c = hyperparams['c']
 	sigma_sq = hyperparams['sigma_sq']
-	K_XX = kernel_matrix(X_train, X_train, c, kernel_params)
-	K_ZX = kernel_matrix(X_new, X_train, c, kernel_params)
+	K_XX = skim_kernel_matrix(X_train, X_train, c, kernel_params)
+	K_ZX = skim_kernel_matrix(X_new, X_train, c, kernel_params)
 
 	alpha_hat = kernel_ridge(K_XX, Y_train, sigma_sq, opt_params)
 	Y_pred = ridge_predict(K_ZX, alpha_hat)

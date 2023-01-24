@@ -15,12 +15,17 @@ def linear_kernel(x, y):
     return jnp.dot(x, y)
 
 
-def kernel_matrix(X, Z, c, kernel_params):
-    mapx1 = jax.vmap(lambda x, z: skim_fa_kernel(x, z, c, kernel_params), 
+def kernel_matrix(X, Z, kernel):
+    mapx1 = jax.vmap(lambda x, z: kernel(x, z), 
                      in_axes=(0, None), out_axes=0)
     
     mapx2 = jax.vmap(lambda x, z: mapx1(x, z), in_axes=(None, 0), out_axes=1)
     return mapx2(X, Z)
+
+
+def skim_kernel_matrix(X, Z, c, kernel_params):
+    kernel_fn = lambda x, z: skim_fa_kernel(x, z, c, kernel_params)
+    return kernel_matrix(X, Z, kernel_fn)
 
 
 @jax.jit
@@ -32,6 +37,12 @@ def kernel_pow_s_1d(xi_feat, zi_feat, kappa_i, s):
 def kernel_pow_s(x, z, kappa, s):
     mapped_kernel = vmap(kernel_pow_s_1d, in_axes=(0, 0, 0, None))
     return jnp.sum(mapped_kernel(x, z, kappa, s))
+
+
+@jax.jit
+def kernel_V(x, z, V):
+    mapped_kernel = vmap(kernel_pow_s_1d, in_axes=(0, 0, None, None))
+    return jnp.prod(mapped_kernel(x[V], z[V], 1., 1))
 
 
 def skim_fa_kernel(x, z, c, kernel_params):

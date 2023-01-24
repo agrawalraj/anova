@@ -38,7 +38,7 @@ class SKIMFA(object):
             # Update c
             hyperparams['c'] = scheduler.update(t, c, kernel_params)
 
-            # Keep track of parameter changes TODO: ADD BACK
+            # Keep track of parameter changes
             logger.update(t, loss, hyperparams, kernel_params, opt_params, 
                             self.X_train_feat, self.Y_train, 
                             self.X_valid_feat, self.Y_valid)
@@ -63,14 +63,14 @@ class GaussianSKIMFA(SKIMFA):
         hyperparams, kernel_params, alpha = self.logger.get_final_params()
         c = hyperparams['c']
         X_test_feat = self.featprocessor.transform(X_test)
-        K = kernel_matrix(X_test_feat, self.X_train_feat, c, kernel_params)
+        K = skim_kernel_matrix(X_test_feat, self.X_train_feat, c, kernel_params)
         return ridge_predict(K, alpha)
 
     @property
     def selected_covariates(self):
         hyperparams, kernel_params, __ = self.logger.get_final_params()
         kappa = get_kappa(kernel_params['U_tilde'], c)
-        return jnp.where(kappa > 0)[0]
+        return list(jnp.where(kappa > 0)[0])
 
 
 if __name__ == "__main__":
