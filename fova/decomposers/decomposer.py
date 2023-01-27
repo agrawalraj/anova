@@ -57,18 +57,3 @@ class Decomposer(ABC):
             f_V = self.get_effect(X_feat, list(V))
             decomposition[V] = f_V
         return decomposition
-
-
-if __name__ == "__main__":
-    import pytest
-
-    def test_all_subsets():
-        selected = [1, 4, 0]
-        q = 1
-        V_q = all_subsets(selected, q, False)
-        V_q = list(V_q)
-        assert len(V_q) == 3
-        V_all = all_subsets(selected, 2, True)
-        print([list(e) for e in V_all])
-
-    test_all_subsets()
