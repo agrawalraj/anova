@@ -34,9 +34,9 @@ class TreeBasis(object):
 		return X_feat.reshape((N, p, 1))
 
 
-@jax.jit
-def transform1D(x1d, n_cuts, quantile):
+# @jax.jit
+# def transform1D(x1d, n_cuts, quantile):
 
 
-@jax.jit
-def transform1D(n_cuts, ):
+# @jax.jit
+# def transform1D(n_cuts, ):
