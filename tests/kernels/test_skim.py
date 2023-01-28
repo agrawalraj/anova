@@ -90,6 +90,3 @@ def test_skim_matches_weight_space_view_basis():
 
 		assert relative_error(K_skim, K_explicit) < 1e-5
 
-
-
-

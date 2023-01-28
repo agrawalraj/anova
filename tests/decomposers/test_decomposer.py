@@ -8,4 +8,3 @@ def test_all_subsets():
     V_q = all_subsets(selected, q, False)
     V_q = list(V_q)
     assert len(V_q) == 3
-        
