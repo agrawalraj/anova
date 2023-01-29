@@ -1,13 +1,17 @@
 # Configuration file for the Sphinx documentation builder.
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
 # -- Project information
 
 project = 'fava'
-copyright = '2021, Graziella'
-author = 'Graziella'
+copyright = '2023, Raj Agrawal'
+author = 'Raj Agrawal'
 
-release = '0.1'
-version = '0.1.0'
+release = '1.0'
+version = '1.0.0'
 
 import pydata_sphinx_theme
 
