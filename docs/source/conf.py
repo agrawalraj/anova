@@ -34,8 +34,12 @@ intersphinx_disabled_domains = ['std']
 templates_path = ['_templates']
 
 # -- Options for HTML output
+html_static_path = ['_static']
+html_logo = "fava_logo.png"
+
 
 html_theme = 'pydata_sphinx_theme'
+
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
