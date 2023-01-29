@@ -3,6 +3,6 @@ import setuptools
 from setuptools import setup
 
 setup(name="fova",
-      version="0.0",
+      version="1.0",
       packages=setuptools.find_packages()
     )
