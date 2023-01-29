@@ -1,7 +1,7 @@
 
 import jax.numpy as jnp
-from fova.inference.losses import fit_predict_new
-from fova.kernels.skim import get_kappa
+from fava.inference.losses import fit_predict_new
+from fava.kernels.skim import get_kappa
 
 
 class GausLogger(object):

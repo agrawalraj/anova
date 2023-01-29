@@ -4,9 +4,9 @@ TODO: say what this does
 """
 
 import jax.numpy as jnp
-from fova.decomposers.decomposer import Decomposer
-from fova.kernels.skim import kernel_matrix, kernel_V, get_kappa
-from fova.inference.ridge_regression import ridge_predict
+from fava.decomposers.decomposer import Decomposer
+from fava.kernels.skim import kernel_matrix, kernel_V, get_kappa
+from fava.inference.ridge_regression import ridge_predict
 
 
 class TensorProductKernelANOVA(Decomposer):

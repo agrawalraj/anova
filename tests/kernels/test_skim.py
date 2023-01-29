@@ -4,8 +4,8 @@ import jax.numpy as jnp
 from jax import random
 from sklearn.preprocessing import PolynomialFeatures
 
-from fova.kernels.skim import *
-from fova.basis.maps import RepeatedFiniteBasis
+from fava.kernels.skim import *
+from fava.basis.maps import RepeatedFiniteBasis
 
 
 def make_feature_map(X, Q, include_bias=True):

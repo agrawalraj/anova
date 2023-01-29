@@ -4,11 +4,11 @@ from jax import grad, jit, vmap
 from jax import random
 import jax
 
-from fova.inference.fit import GaussianSKIMFA
-from fova.basis.maps import LinearBasis
-from fova.misc.scheduler import truncScheduler
-from fova.misc.logger import GausLogger
-from fova.decomposers.tensor_product import TensorProductKernelANOVA, LinearANOVA
+from fava.inference.fit import GaussianSKIMFA
+from fava.basis.maps import LinearBasis
+from fava.misc.scheduler import truncScheduler
+from fava.misc.logger import GausLogger
+from fava.decomposers.tensor_product import TensorProductKernelANOVA, LinearANOVA
 
 # Generate random data
 key = random.PRNGKey(0)

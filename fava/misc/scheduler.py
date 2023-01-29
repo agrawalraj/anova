@@ -1,6 +1,6 @@
 
 import jax.numpy as jnp
-from fova.kernels.skim import get_kappa
+from fava.kernels.skim import get_kappa
 
 
 def get_percentile_thresh(U_tilde, percentile=.25):

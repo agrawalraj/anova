@@ -1,5 +1,5 @@
 
-from fova.decomposers.decomposer import *
+from fava.decomposers.decomposer import *
 
 
 def test_all_subsets():

@@ -4,12 +4,12 @@ import jax.numpy as jnp
 from jax import random
 from sklearn.preprocessing import PolynomialFeatures
 
-from fova.kernels.skim import *
-from fova.basis.maps import LinearBasis
-from fova.decomposers.tensor_product import TensorProductKernelANOVA, LinearANOVA
-from fova.inference.fit import GaussianSKIMFA
-from fova.misc.scheduler import truncScheduler
-from fova.misc.logger import GausLogger
+from fava.kernels.skim import *
+from fava.basis.maps import LinearBasis
+from fava.decomposers.tensor_product import TensorProductKernelANOVA, LinearANOVA
+from fava.inference.fit import GaussianSKIMFA
+from fava.misc.scheduler import truncScheduler
+from fava.misc.logger import GausLogger
 from sklearn.linear_model import Ridge
 
 

@@ -6,9 +6,9 @@ from tqdm import tqdm
 from math import floor
 from jax import random
 
-from fova.inference.losses import ridge_stochastic_cv_loss, update_kernel
-from fova.misc.logger import GausLogger
-from fova.kernels.skim import skim_kernel_matrix, get_kappa
+from fava.inference.losses import ridge_stochastic_cv_loss, update_kernel
+from fava.misc.logger import GausLogger
+from fava.kernels.skim import skim_kernel_matrix, get_kappa
 
 
 class SKIMFA(object):
@@ -77,9 +77,9 @@ class GaussianSKIMFA(SKIMFA):
 
 
 if __name__ == "__main__":
-    from fova.basis.maps import LinearBasis
-    from fova.misc.scheduler import truncScheduler
-    from fova.misc.logger import GausLogger
+    from fava.basis.maps import LinearBasis
+    from fava.misc.scheduler import truncScheduler
+    from fava.misc.logger import GausLogger
 
     featprocessor = LinearBasis()
     scheduler = truncScheduler()

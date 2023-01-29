@@ -2,7 +2,7 @@
 
 # -- Project information
 
-project = 'fova'
+project = 'fava'
 copyright = '2021, Graziella'
 author = 'Graziella'
 

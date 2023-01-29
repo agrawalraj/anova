@@ -1,7 +1,7 @@
 
 import jax as jnp
-from fova.kernels.skim import *
-from fova.inference.ridge_regression import *
+from fava.kernels.skim import *
+from fava.inference.ridge_regression import *
 
 
 @jax.jit
