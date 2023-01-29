@@ -9,6 +9,8 @@ author = 'Graziella'
 release = '0.1'
 version = '0.1.0'
 
+import pydata_sphinx_theme
+
 # -- General configuration
 
 extensions = [
