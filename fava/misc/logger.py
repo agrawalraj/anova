@@ -5,7 +5,7 @@ from fava.kernels.skim import get_kappa
 
 
 class GausLogger(object):
-	def __init__(self, freq=100):
+	def __init__(self, freq=25):
 		self.freq = freq
 		self.val_losses = []
 		self.all_alpha = []
@@ -38,6 +38,8 @@ class GausLogger(object):
 			self.all_alpha.append(alpha_hat)
 			self.all_hyperparams.append(hyperparams.copy()) 
 			self.all_kernel_params.append(kernel_params.copy())
+			if 'alpha_prev' in opt_params.keys():
+				opt_params['alpha_prev'] = alpha_hat.copy()
 
 	def get_final_params(self):
 		return self.all_hyperparams[-1], self.all_kernel_params[-1], self.all_alpha[-1]

@@ -12,7 +12,7 @@ from fava.decomposers.tensor_product import TensorProductKernelANOVA, LinearANOV
 
 # Generate random data
 key = random.PRNGKey(0)
-N = 500
+N = 250
 p = 750
 X = random.normal(key, shape=(N, p))
 frac_train = .8
@@ -43,7 +43,7 @@ opt_params = dict()
 opt_params['cg'] = True
 opt_params['cg_tol'] = .01
 opt_params['M'] = 20
-opt_params['alpha_prev'] = jnp.zeros(N_train - opt_params['M'])
+opt_params['alpha_prev'] = jnp.zeros(N_train)
 opt_params['gamma'] = .1
 opt_params['T'] = 200
 

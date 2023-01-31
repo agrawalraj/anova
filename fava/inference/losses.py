@@ -34,8 +34,6 @@ def ridge_stochastic_cv_loss(key, X, Y, hyperparams, kernel_params, opt_params):
 	cv_indcs = indcs[(N - M):]
 	loss, alpha_hat = fit_predict_new(X[train_indcs, :], Y[train_indcs], X[cv_indcs, :], 
 			Y[cv_indcs], hyperparams, kernel_params, opt_params)
-
-	opt_params['alpha_prev'] = jnp.array([e.item() for e in alpha_hat])
 	return loss
 
 
