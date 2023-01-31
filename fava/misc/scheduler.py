@@ -34,3 +34,12 @@ class truncScheduler(object):
 		c = trunc_scheduler_helper(t, U_tilde, c_prev, **kwargs)
 		self.states.append(c)
 		return c
+
+
+class constantScheduler(object):
+	def __init__(self):
+		self.states = []
+
+	def update(self, t, c, kernel_params, **kwargs):
+		self.states.append(c)
+		return c
