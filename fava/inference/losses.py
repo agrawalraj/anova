@@ -32,8 +32,11 @@ def ridge_stochastic_cv_loss(key, X, Y, hyperparams, kernel_params, opt_params):
 	jax.random.permutation(key, indcs, axis=0)
 	train_indcs = indcs[:(N - M)]
 	cv_indcs = indcs[(N - M):]
-	return fit_predict_new(X[train_indcs, :], Y[train_indcs], X[cv_indcs, :], 
-			Y[cv_indcs], hyperparams, kernel_params, opt_params)[0]
+	loss, alpha_hat = fit_predict_new(X[train_indcs, :], Y[train_indcs], X[cv_indcs, :], 
+			Y[cv_indcs], hyperparams, kernel_params, opt_params)
+
+	opt_params['alpha_prev'] = jnp.array([e.item() for e in alpha_hat])
+	return loss
 
 
 def update_kernel(key, X, Y, loss, hyperparams, kernel_params, opt_params):
