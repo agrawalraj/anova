@@ -14,16 +14,16 @@ from fava.misc.scheduler import constantScheduler
 from fava.misc.logger import GausLogger
 from fava.decomposers.tensor_product import TensorProductKernelANOVA, LinearANOVA
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+from sklearn.linear_model import RidgeCV
+from sklearn.preprocessing import PolynomialFeatures
 
 
 data = pd.read_excel('./data/Concrete_Data.xls') 
 data = data.sample(frac=1) # shuffle all the data
 
-# # Remove day variable so that all features are continuous
-# data = data.drop(['Age (day)'], axis=1)
-
 X = data.values[:, :-1].copy()
-
 X = (X - X.mean(axis=0)) / X.std(axis=0)
 
 p = X.shape[1]
@@ -32,44 +32,14 @@ avg_Y = Y.mean()
 std_Y = Y.std()
 Y = (Y - avg_Y) / std_Y
 
+
+X_train, X_valid, Y_train, Y_valid = train_test_split(X, Y, test_size=.2, random_state=42)
+
+# Random forest
 f = RandomForestRegressor(n_estimators=5000, oob_score=True)
-f.fit(X, Y)
+f.fit(X_train, Y_train)
 
-
-
-print(f.oob_score_)
-
-np.random.seed(42)
-N_fake = 1000
-X_fake = np.random.uniform(low=-5, high=5, size=(N_fake, X.shape[1]))
-
-f_X = f.predict(X_fake)
-
-print(f'Var(f(X)): {f.predict(X).var()}')
-
-#### Project onto two-way linear interaction model
-
-X_fake = jnp.array(X)
-
-# Generate random data
-key = random.PRNGKey(0)
-N, p = X_fake.shape
-Z = jnp.array(X_fake)
-frac_train = .8
-N_train = int(N * frac_train)
-
-# Y_syn = jnp.array(f_X)
-Y_syn = jnp.array(Y)
-
-Z_train = Z[:N_train, :]
-Y_train = Y_syn[:N_train]
-
-# Z_valid = Z[N_train:, :]
-# Y_valid = Y_syn[N_train:]
-
-Z_valid = Z[N_train:, :]
-Y_valid = Y[N_train:]
-
+print(f'Random Forest R2: {r2_score(Y_valid, f.predict(X_valid))}')
 
 # Ridge regression
 def make_feature_map(X, Q, include_bias=True):
@@ -78,25 +48,24 @@ def make_feature_map(X, Q, include_bias=True):
 									include_bias=include_bias)
 
 	trans = feat_map.fit_transform(np.array(X))
-	print(feat_map.get_feature_names_out())
+	# print(feat_map.get_feature_names_out())
 	return trans
 
+ridge = RidgeCV(alphas=[1e-3, 1e-2, 1e-1, 1, 10, 100]).fit(make_feature_map(X_train, 1), np.array(Y_train))
+print(f'Ridge R2 (Q=1): {r2_score(Y_valid, ridge.predict(make_feature_map(X_valid, 1)))}')
+
+ridge = RidgeCV(alphas=[1e-3, 1e-2, 1e-1, 1, 10, 100]).fit(make_feature_map(X_train, 2), np.array(Y_train))
+print(f'Ridge R2 (Q=2): {r2_score(Y_valid, ridge.predict(make_feature_map(X_valid, 2)))}')
+
+# SKIM-FA
 
 
-from sklearn.linear_model import RidgeCV
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import r2_score
-
-ridge = RidgeCV(alphas=[1e-3, 1e-2, 1e-1, 1, 10, 100]).fit(make_feature_map(Z_train, 2), np.array(Y_train))
-r2_score(Y_valid, ridge.predict(make_feature_map(Z_valid, 2)))
-
-# Z_valid = jnp.array(X)
-# Y_valid = jnp.array(f.predict(X))
-
+# Generate random data
+key = random.PRNGKey(0)
 
 kernel_params = dict()
 Q = 2
-kernel_params['U_tilde'] = .1 * jnp.ones(p)
+kernel_params['U_tilde'] = jnp.ones(p)
 kernel_params['eta'] = jnp.ones(Q+1)
 
 hyperparams = dict()
@@ -116,14 +85,14 @@ opt_params['T'] = 1000
 
 # featprocessor = LinearBasis(Z_train)
 # featprocessor = TreeBasis(Z, n_bins=10)
-featprocessor = LinearBasis(Z_train)
+featprocessor = LinearBasis(X_train)
 
 scheduler = constantScheduler()
 logger = GausLogger(100)
 
 opt_params['scheduler'] = scheduler
 
-skim = GaussianSKIMFA(Z_train, Y_train, Z_valid, Y_valid, featprocessor)
+skim = GaussianSKIMFA(X_train, Y_train, X_valid, Y_valid, featprocessor)
 
 skim.fit(key, hyperparams, kernel_params, opt_params, 
             logger=GausLogger())
