@@ -10,6 +10,11 @@ def get_kappa(u_tilde, c):
     return 1 / (1 - c) * jax.nn.relu((u_tilde ** 2 / (1 + u_tilde ** 2)) - c)
 
 
+# @jax.jit
+# def get_kappa(u_tilde, c):
+#     return 1 / (1 - c) * jax.nn.relu(u_tilde - c)
+
+
 @jax.jit
 def linear_kernel(x, y):
     return jnp.dot(x, y)

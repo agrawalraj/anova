@@ -14,7 +14,7 @@ class GausLogger(object):
 
 	def update(
 			self, t, loss, hyperparams, kernel_params, opt_params, 
-			X_train_feat, Y_train, X_valid_feat, Y_valid
+			X_train_feat, Y_train, X_valid_feat, Y_valid,
 		):
 
 		if t % self.freq == 0:
@@ -33,6 +33,9 @@ class GausLogger(object):
 			# Print MSE
 			print(f'MSE (Validation)={mse}.')
 			print(f'R2 (Validation)={1 - mse/Y_valid.var()}.')
+			print(f'eta={kernel_params["eta"]}')
+			if kappa.shape[0] <= 100:
+				print(f'kappa={kappa}')
 
 			# Cache parameters
 			self.all_alpha.append(alpha_hat)
