@@ -1,6 +1,8 @@
 
+import numpy as np
 import jax.numpy as jnp
 from jax import vmap
+from sklearn.preprocessing import KBinsDiscretizer
 
 
 class FiniteDimensionalBasis(object):
@@ -26,19 +28,6 @@ class LinearBasis(object):
 		return X_feat.reshape((N, p, 1))
 
 
-class TreeBasis(object):
-	def __init__(self, X_train, n_cuts, quantile):
-		self._mean = X_train.mean(axis=0)
-		self._sd = X_train.std(axis=0)
-
-	def transform(self, X, normalize=True):
-		if normalize:
-			N, p = X.shape
-			X_feat = (X - self._mean) / self._sd
-			return X_feat.reshape((N, p, 1))
-		return X.copy().reshape((N, p, 1))
-
-
 class RepeatedFiniteBasis(object):
 	def __init__(self, X_train, basis1d):
 		self.basis1d = basis1d
@@ -49,6 +38,28 @@ class RepeatedFiniteBasis(object):
 
 	def transform(self, X, normalize=True):
 		X_feat = jnp.transpose(self.basis_mapped(X), axes=(0, 2, 1))
+		if normalize:
+			return (X_feat - self._basis_mean) / self._basis_sd
+		else:
+			return X_feat
+
+
+class TreeBasis(object):
+	def __init__(self, X_train, **kwargs):
+		self.transformer = KBinsDiscretizer(encode='onehot-dense', **kwargs)
+		N, p = X_train.shape
+		X_feat = jnp.array(self.transformer.fit_transform(np.array(X_train)))
+		assert len(set(self.transformer.n_bins_)) == 1, "Different number of bins!"
+		nbins = self.transformer.n_bins_[0]
+		X_feat = X_feat.reshape((N, p, nbins))
+		self.nbins = nbins
+		self._basis_mean = X_feat.mean(axis=0)
+		self._basis_sd = X_feat.std(axis=0)
+
+	def transform(self, X, normalize=True):
+		N, p = X.shape
+		nbins = self.nbins
+		X_feat = jnp.array(self.transformer.transform(np.array(X))).reshape((N, p, nbins))
 		if normalize:
 			return (X_feat - self._basis_mean) / self._basis_sd
 		else:

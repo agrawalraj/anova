@@ -30,7 +30,7 @@ def skim_kernel_matrix(X, Z, c, kernel_params):
 
 @jax.jit
 def kernel_pow_s_1d(xi_feat, zi_feat, kappa_i, s):
-    return (kappa_i**2 * linear_kernel(xi_feat, zi_feat)) ** s
+    return (kappa_i**2 * linear_kernel(xi_feat, zi_feat)) ** s # TODO: replace linear kernel to arb zero-mean kernel
 
 
 @jax.jit
