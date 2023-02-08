@@ -7,6 +7,7 @@ from math import floor
 from jax import random
 
 from fava.inference.losses import ridge_stochastic_cv_loss, update_kernel
+from fava.inference.ridge_regression import ridge_predict
 from fava.misc.logger import GausLogger
 from fava.kernels.skim import skim_kernel_matrix, get_kappa
 
@@ -62,8 +63,8 @@ class GaussianSKIMFA(SKIMFA):
                                         kernel_params_init, opt_params, logger)
 
     def predict(self, X_test):
-        err_msg = f"There are {X_test.shape[1]} instead of {p} covariates"
-        assert X_test.shape[1] == p, err_msg
+        err_msg = f"There are {X_test.shape[1]} instead of {self.p} covariates"
+        assert X_test.shape[1] == self.p, err_msg
         hyperparams, kernel_params, alpha = self.logger.get_final_params()
         c = hyperparams['c']
         X_test_feat = self.featprocessor.transform(X_test)
@@ -74,6 +75,10 @@ class GaussianSKIMFA(SKIMFA):
         hyperparams, kernel_params, __ = self.logger.get_final_params()
         kappa = get_kappa(kernel_params['U_tilde'], hyperparams['c'])
         return sorted(jnp.where(kappa > 0)[0].tolist())
+
+
+class PlattSKIMFA(GaussianSKIMFA):
+    pass
 
 
 if __name__ == "__main__":

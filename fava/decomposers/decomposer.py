@@ -44,6 +44,15 @@ class Decomposer(ABC):
             variation += self.get_effect(X_feat, list(V))
         return variation
 
+    def get_variation_at_subset(self, X_feat, cov_set):
+        assert len(set(list(range(self.p))) - set(cov_set)) == 0, "Covariate set out of bounds"
+        V_all = all_subsets(self.selected_covs, self.Q, True) # TODO: avoid explicity generating all interactions
+        variation = jnp.zeros(X_feat.shape[0])
+        for V in tqdm(V_order):
+            if len(set(list(V) & set(cov_set))) > 0:
+                variation += self.get_effect(X_feat, list(V))
+        return variation
+
     def get_decomposition(self, X, max_effects=1e4):
         err1_msg = f"{X.shape[1]} different than {self.p} input covariates"
         assert X.shape[1] == self.p, err1_msg
