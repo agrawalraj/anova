@@ -20,7 +20,7 @@ def fit_predict_new(
 	alpha_hat = kernel_ridge(K_XX, Y_train, sigma_sq, opt_params)
 	Y_pred = ridge_predict(K_ZX, alpha_hat)
 
-	return mean_squared_error(Y_pred, Y_new), alpha_hat
+	return mean_squared_error(Y_pred, Y_new), Y_pred, alpha_hat
 
 
 def ridge_stochastic_cv_loss(key, X, Y, hyperparams, kernel_params, opt_params):

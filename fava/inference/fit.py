@@ -1,5 +1,6 @@
 
 import time
+import numpy as np
 import jax.numpy as jnp
 
 from tqdm import tqdm
@@ -10,6 +11,7 @@ from fava.inference.losses import ridge_stochastic_cv_loss, update_kernel
 from fava.inference.ridge_regression import ridge_predict
 from fava.misc.logger import GausLogger
 from fava.kernels.skim import skim_kernel_matrix, get_kappa
+from sklearn.linear_model import LogisticRegression
 
 
 class SKIMFA(object):
@@ -78,7 +80,26 @@ class GaussianSKIMFA(SKIMFA):
 
 
 class PlattSKIMFA(GaussianSKIMFA):
-    pass
+    def fit(
+            self, key, hyperparams_init, kernel_params_init, opt_params, 
+            logger=BernLogger()
+        ):
+        super(PlattSKIMFA).fit(key, hyperparams_init, 
+                                    kernel_params_init, opt_params, logger)
+        # Platt scaling
+        skim_train_unscaled = np.array(super(PlattSKIMFA).predict(self.X_train))
+        N_train = self.X_train.shape[0]
+        skim_train_unscaled = skim_train_unscaled.reshape((N_train,1))
+        Y_train = np.array(self.Y_train)
+        platt = LogisticRegression(penalty=None, 
+                                    fit_intercept=True, random_state=0)
+        platt.fit(skim_train_unscaled, Y_train)
+        self.platt = platt
+
+    def predict(self, X_test):
+        skim_unscaled = np.array(super(PlattSKIMFA).predict(X_test))
+        skim_unscaled = skim_unscaled.reshape((skim_unscaled.shape[0],1))
+        return jnp.array(self.platt.predict_proba(skim_unscaled)[:, 1])
 
 
 if __name__ == "__main__":
