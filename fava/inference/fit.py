@@ -96,10 +96,14 @@ class PlattSKIMFA(GaussianSKIMFA):
         platt.fit(skim_train_unscaled, Y_train)
         self.platt = platt
 
-    def predict(self, X_test):
+    def predict_proba(self, X_test):
         skim_unscaled = np.array(super(PlattSKIMFA).predict(X_test))
         skim_unscaled = skim_unscaled.reshape((skim_unscaled.shape[0],1))
         return jnp.array(self.platt.predict_proba(skim_unscaled)[:, 1])
+
+    def predict(self, X_test):
+        probs = self.predict_proba(X_test)
+        return 2 * jnp.array((probs >= .5), dtype=jnp.int32) - 1
 
 
 if __name__ == "__main__":

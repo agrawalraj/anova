@@ -66,6 +66,14 @@ class TreeBasis(object):
 			return X_feat
 
 
+class Identity(object):
+	def __init__(self):
+		pass
+
+	def transform(self, X):
+		return X
+
+
 class BasisComposer(object):
 	# LinearBasis (zero mean input) ---> repeated finite basis 
 	pass
