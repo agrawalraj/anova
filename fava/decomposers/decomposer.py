@@ -29,6 +29,7 @@ class Decomposer(ABC):
         self.kernel_params = kernel_params
         self.alpha = alpha
         self.selected_covs = model.selected_covariates()
+        assert isinstance(self.selected_covs, list)
         self.Q = kernel_params['eta'].shape[0] - 1
         self.p = model.p
         self.X_train_feat = model.X_train_feat.copy()
