@@ -32,11 +32,11 @@ class GausLogger(object):
 			self.val_losses.append(mse)
 
 			# Print metrics
-			print(f'MSE (Validation)={mse}.')
-			print(f'R2 (Validation)={1 - mse/Y_valid.var()}.')
+			print(f'MSE (Validation)={round(mse, 4)}.')
+			print(f'R2 (Validation)={round(1 - mse/Y_valid.var(), 4)}.')
 			print(f'eta={kernel_params["eta"]}')
 			if kappa.shape[0] <= 100:
-				print(f'kappa={kappa}')
+				print(f'kappa={kappa}') # TODO: instead report top most important covariates
 
 			# Cache parameters
 			self.all_alpha.append(alpha_hat)
