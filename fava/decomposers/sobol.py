@@ -26,7 +26,7 @@ class Sobol(Decomposer):
             for xv in X[:, V]:
                 X_probe = self.X_dist.copy()
                 X_probe = X_probe.at[:, V].set(xv)
-                preds.append(model.predict(X_probe).mean()) # TODO: replace with predict_proba if needed
+                preds.append(self.model.predict(X_probe).mean()) # TODO: replace with predict_proba if needed
             return jnp.array(preds)
 
     def get_effect(self, X, V):
@@ -42,28 +42,3 @@ class Sobol(Decomposer):
                         effect -= effects[W]
             effects[U] = effect
         return effects[tuple(V)]
-
-
-if __name__ == "__main__":
-    class ExampleModel:
-        def predict(self, X):
-            return X[:, 0] + X[:, 1] + X[:, 0]*X[:, 1]
-
-    model = ExampleModel()
-    N = 100
-    p = 2
-    key = random.PRNGKey(0)
-    X = random.normal(key, shape=(N, p))
-
-    sobol_decomposer = Sobol(X, model, 2)
-    # print(sobol_decomposer.get_effect(X, [0]))
-
-    decomp = sobol_decomposer.get_decomposition(X)
-    sum_check = jnp.zeros(N)
-    for val in decomp.values():
-        sum_check += val
-
-    print(jnp.abs(sum_check - model.predict(X)).sum())
-
-    print(X[:, 0])
-    print(decomp[(0,)])
