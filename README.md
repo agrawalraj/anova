@@ -1,6 +1,6 @@
 # FAVA
 
-FAVA is a library for efficiently performing functional ANOVA decompositions in high dimensions, and is powered by JAX. FAVA is based primarily on https://arxiv.org/abs/2106.12408, and is currently under active development.
+FAVA is a library for efficiently performing  **f**unctional  **A**NO**VA** decompositions in high dimensions, and is powered by JAX. FAVA is based primarily on https://arxiv.org/abs/2106.12408, and is currently under active development.
 
 # Installation
 
