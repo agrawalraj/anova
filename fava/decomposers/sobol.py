@@ -67,6 +67,3 @@ if __name__ == "__main__":
 
     print(X[:, 0])
     print(decomp[(0,)])
-
-
-
