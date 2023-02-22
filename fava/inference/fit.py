@@ -9,7 +9,7 @@ from jax import random
 
 from fava.inference.losses import ridge_stochastic_cv_loss, update_kernel
 from fava.inference.ridge_regression import ridge_predict
-from fava.misc.logger import GausLogger
+from fava.misc.logger import GausLogger, BernLogger
 from fava.kernels.skim import skim_kernel_matrix, get_kappa
 from sklearn.linear_model import LogisticRegression
 
