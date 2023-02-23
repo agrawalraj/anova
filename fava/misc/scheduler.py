@@ -1,5 +1,6 @@
 
 import jax.numpy as jnp
+from math import floor
 from fava.kernels.skim import get_kappa
 
 
@@ -10,8 +11,8 @@ def get_percentile_thresh(U_tilde, percentile=.25):
 
 
 def trunc_scheduler_helper(
-		t, U_tilde, c_prev, r=.01, gamma=.75, 
-		iter_cut=500, pcut=.25
+		t, U_tilde, c_prev, r=.005, gamma=.5, 
+		iter_cut=500, pcut=.1
 	):
 	if t < iter_cut:
 		return 0.
