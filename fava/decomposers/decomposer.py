@@ -56,7 +56,7 @@ class Decomposer(ABC):
         V_all = all_subsets(self.selected_covs, self.Q, True)
         variation = jnp.zeros(X_feat.shape[0])
         for V in tqdm(V_all):
-            if len(set(list(V) & set(cov_set))) > 0:
+            if len(set(list(V)) & set(cov_set)) > 0:
                 variation += self.get_effect(X_feat, list(V))
         return variation
 
