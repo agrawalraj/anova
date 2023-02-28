@@ -98,3 +98,54 @@ def test_anova():
 		print(V, ridge.coef_[effect_ix], beta)
 		assert jnp.abs((ridge.coef_[effect_ix] - beta)).sum() < 1e-2
 
+
+def test_effect():
+	# Sum of the effects should equal the prediction output
+	key = random.PRNGKey(0)
+	N = 200
+	p = 5
+	X = random.normal(key, shape=(N, p))
+	Y = X[:, 0] + X[:, 1] + X[:, 2] * X[:, 3] + 2
+
+	X_train = X[:100, :]
+	Y_train = Y[:100]
+
+	X_valid = X[100:, :]
+	Y_valid = Y[100:]
+
+	kernel_params = dict()
+	Q = 2
+	kernel_params['U_tilde'] = jnp.ones(p)
+	kernel_params['eta'] = jnp.ones(Q+1)
+
+	hyperparams = dict()
+	hyperparams['sigma_sq'] = .5 * jnp.var(Y)
+	hyperparams['c'] = 0.
+
+	opt_params = dict()
+	opt_params['cg'] = True
+	opt_params['cg_tol'] = .001
+	opt_params['M'] = 20
+	opt_params['gamma'] = 0 # don't update params
+	opt_params['T'] = 1
+
+	featprocessor = LinearBasis(X_train)
+	scheduler = truncScheduler()
+	logger = GausLogger(100)
+
+	opt_params['scheduler'] = scheduler
+
+	skim = GaussianSKIMFA(X_train, Y_train, X_valid, Y_valid, featprocessor)
+
+	skim.fit(key, hyperparams, kernel_params, opt_params, 
+	            logger=GausLogger())
+
+	decompose = TensorProductKernelANOVA(skim)
+
+	Y_test_pred = skim.predict(X_valid)
+	variation_intercept = decompose.get_variation_at_order(X_valid, 0)
+	variation_additive = decompose.get_variation_at_order(X_valid, 1)
+	variation_pairwise = decompose.get_variation_at_order(X_valid, 2)
+	total_variation = variation_intercept + variation_additive + variation_pairwise
+
+	assert jnp.abs(Y_test_pred - total_variation).max() < 1e-5
