@@ -20,7 +20,7 @@ class TensorProductKernelANOVA(Decomposer):
             X_train_feat = self.X_train_feat
             q = len(V)
             eta_q = eta[q]
-            theta_V = eta_q * jnp.product(kappa[jnp.array(V)]).item()
+            theta_V = (eta_q * jnp.product(kappa[jnp.array(V)]).item()) ** 2
             kernel_fn = lambda x, z: kernel_V(x, z, V)
             K_ZX = kernel_matrix(X_feat, X_train_feat, kernel_fn)
             return theta_V * ridge_predict(K_ZX, alpha)
@@ -31,7 +31,7 @@ class LinearANOVA(TensorProductKernelANOVA):
         if len(V) == 0: # Constant / intercept term
             eta = self.kernel_params['eta']
             alpha = self.alpha
-            return eta[0] * alpha.sum() * jnp.ones(X_feat.shape[0])
+            return eta[0]**2 * alpha.sum() * jnp.ones(X_feat.shape[0])
         else:
             beta = self.get_coef(V)
             N, p, __ = X_feat.shape
