@@ -42,7 +42,7 @@ class Decomposer(ABC):
         assert X.shape[1] == self.p, err1_msg
         assert order <= self.Q, f"Model fit only contains {self.Q} interactions"
         X_feat = self.featprocessor.transform(X)
-        V_order = all_subsets(self.selected_covs, self.Q, False)
+        V_order = all_subsets(self.selected_covs, self.Q, False) # TODO: avoid explicity generating all interactions
         variation = jnp.zeros(X_feat.shape[0])
         for V in tqdm(V_order):
             variation += self.get_effect(X_feat, list(V))
@@ -53,9 +53,9 @@ class Decomposer(ABC):
         assert X.shape[1] == self.p, err1_msg
         assert len(set(cov_set) - set(list(range(self.p)))) == 0, "Covariate set out of bounds"
         X_feat = self.featprocessor.transform(X)
-        V_all = all_subsets(self.selected_covs, self.Q, True) # TODO: avoid explicity generating all interactions
+        V_all = all_subsets(self.selected_covs, self.Q, True)
         variation = jnp.zeros(X_feat.shape[0])
-        for V in tqdm(V_order):
+        for V in tqdm(V_all):
             if len(set(list(V) & set(cov_set))) > 0:
                 variation += self.get_effect(X_feat, list(V))
         return variation
