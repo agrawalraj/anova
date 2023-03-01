@@ -4,140 +4,32 @@ import matplotlib
 import warnings
 import numpy as np
 import re
-from matplotlib.colors import LinearSegmentedColormap
-from colors import lab2rgb, lch2lab
+from colors import red_rgb, blue_rgb
 
+# This code modifies the code from https://github.com/slundberg/shap/blob/master/shap/plots/_waterfall.py
+# to work for ANOVA decompositions instead of SHAP decompositions (copyright below)
 
-def lch2rgb(x):
-	return lab2rgb(lch2lab([[x]]))[0][0]
+# The MIT License (MIT)
 
-# define our colors using Lch
-# note that we intentionally vary the lightness during interpolation so as to better
-# enable the eye to see patterns (since patterns are most easily recognized through
-# lightness variability)
-blue_lch = [54., 70., 4.6588]
-l_mid = 40.
-red_lch = [54., 90., 0.35470565 + 2* np.pi]
-gray_lch = [55., 0., 0.]
-blue_rgb = lch2rgb(blue_lch)
-red_rgb = lch2rgb(red_lch)
-gray_rgb = lch2rgb(gray_lch)
-white_rgb = np.array([1.,1.,1.])
+# Copyright (c) 2018 Scott Lundberg
 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 
-light_blue_rgb = np.array([127., 196, 252])/255
-light_red_rgb = np.array([255., 127, 167])/255
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-# define a perceptually uniform color scale using the Lch color space
-reds = []
-greens = []
-blues = []
-alphas = []
-nsteps = 100
-l_vals = list(np.linspace(blue_lch[0], l_mid, nsteps//2)) + list(np.linspace(l_mid, red_lch[0], nsteps//2))
-c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
-h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
-for pos,l,c,h in zip(np.linspace(0, 1, nsteps), l_vals, c_vals, h_vals):
-    lch = [l, c, h]
-    rgb = lch2rgb(lch)
-    reds.append((pos, rgb[0], rgb[0]))
-    greens.append((pos, rgb[1], rgb[1]))
-    blues.append((pos, rgb[2], rgb[2]))
-    alphas.append((pos, 1.0, 1.0))
-
-red_blue = LinearSegmentedColormap('red_blue', {
-    "red": reds,
-    "green": greens,
-    "blue": blues,
-    "alpha": alphas
-})
-red_blue.set_bad(gray_rgb, 1.0)
-red_blue.set_over(gray_rgb, 1.0)
-red_blue.set_under(gray_rgb, 1.0) # "under" is incorrectly used instead of "bad" in the scatter plot
-
-red_blue_no_bounds = LinearSegmentedColormap('red_blue_no_bounds', {
-    "red": reds,
-    "green": greens,
-    "blue": blues,
-    "alpha": alphas
-})
-
-red_blue_transparent = LinearSegmentedColormap('red_blue_no_bounds', {
-    "red": reds,
-    "green": greens,
-    "blue": blues,
-    "alpha": [(a[0], 0.5, 0.5) for a in alphas]
-})
-
-# define a circular version of the color scale for categorical coloring
-reds = []
-greens = []
-blues = []
-alphas = []
-nsteps = 100
-c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
-h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
-for pos,c,h in zip(np.linspace(0, 0.5, nsteps), c_vals, h_vals):
-    lch = [blue_lch[0], c, h]
-    rgb = lch2rgb(lch)
-    reds.append((pos, rgb[0], rgb[0]))
-    greens.append((pos, rgb[1], rgb[1]))
-    blues.append((pos, rgb[2], rgb[2]))
-    alphas.append((pos, 1.0, 1.0))
-c_vals = np.linspace(red_lch[1], blue_lch[1], nsteps)
-h_vals = np.linspace(red_lch[2] - 2 * np.pi, blue_lch[2], nsteps)
-for pos,c,h in zip(np.linspace(0.5, 1, nsteps), c_vals, h_vals):
-    lch = [blue_lch[0], c, h]
-    rgb = lch2rgb(lch)
-    reds.append((pos, rgb[0], rgb[0]))
-    greens.append((pos, rgb[1], rgb[1]))
-    blues.append((pos, rgb[2], rgb[2]))
-    alphas.append((pos, 1.0, 1.0))
-
-red_blue_circle = LinearSegmentedColormap('red_blue_circle', {
-    "red": reds,
-    "green": greens,
-    "blue": blues,
-    "alpha": alphas
-})
-
-colors = []
-for l in np.linspace(1, 0, 100):
-    colors.append((30./255, 136./255, 229./255,l))
-for l in np.linspace(0, 1, 100):
-    colors.append((255./255, 13./255, 87./255,l))
-red_transparent_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
-
-colors = []
-for l in np.linspace(0, 1, 100):
-    colors.append((30./255, 136./255, 229./255,l))
-transparent_blue = LinearSegmentedColormap.from_list("transparent_blue", colors)
-
-colors = []
-for l in np.linspace(0, 1, 100):
-    colors.append((255./255, 13./255, 87./255,l))
-transparent_red = LinearSegmentedColormap.from_list("transparent_red", colors)
-
-old_blue_rgb = np.array([30, 136, 229]) / 255
-old_red_rgb = np.array([255, 13, 87]) / 255
-
-colors = []
-for alpha in np.linspace(1, 0, 100):
-    c = blue_rgb * alpha + (1 - alpha) * white_rgb
-    colors.append(c)
-for alpha in np.linspace(0, 1, 100):
-    c = red_rgb * alpha + (1 - alpha) * white_rgb
-    colors.append(c)
-red_white_blue = LinearSegmentedColormap.from_list("red_transparent_blue", colors)
-
-
-import matplotlib.pyplot as plt
-import matplotlib
-import warnings
-
-# from ._labels import labels
-# from ..utils import safe_isinstance, format_value
-# from . import colors
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE. 
 
 
 def format_value(s, format_str):
@@ -152,7 +44,17 @@ def format_value(s, format_str):
     return s
 
 
-def waterfall_legacy(expected_value, shap_values=None, features=None, feature_names=None, max_display=10, show=True):
+def make_effect_name(V, feature_names):
+	if isinstance(feature_names, list):
+		V_named = [feature_names[j] for j in V]
+	else:
+		V_named = V
+	return '-'.join(V_named)
+
+
+def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True, max_effects=1e4):
+    # Modifies waterfall_legacy function from https://github.com/slundberg/shap/blob/master/shap/plots/_waterfall.py
+
     """ Plots an explanation of a single prediction as a waterfall plot.
     The SHAP value of a feature represents the impact of the evidence provided by that feature on the model's
     output. The waterfall plot is designed to visually display how the SHAP values (evidence) of each feature
@@ -167,9 +69,6 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         be the value of explainer.expected_value.
     shap_values : numpy.array
         One dimensional array of SHAP values.
-    features : numpy.array
-        One dimensional array of feature values. This provides the values of all the
-        features, and should be the same shape as the shap_values argument.
     feature_names : list
         List of feature names (# features).
     max_display : str
@@ -179,6 +78,28 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         to be customized further after it has been created.
     """
 
+    # decomposer 
+    # x_new
+
+    # assert len(x.shape) == 0, "Must be a single datapoint!"
+    # assert x.shape[0] == decomposer.p, "Incorrect covariate dimension!"
+
+    # x = x.reshape((1, x.shape[0]))
+
+    # # ---> generates effects
+    # # featnames2
+
+    # expected_value = decomposer.get_variation_at_order(x, 0) # intercept centering
+    # decomposition = decomposer.get_decomposition(x, max_effects=max_effects)
+
+
+    # expected_value, shap_values=None
+
+    V_all = decomposition.keys()
+    expected_value = decomposition[()]
+    shap_values = np.array([decomposition[V] for V in V_all if len(V) > 0]) # Don't include intercept term
+    feature_names = [make_effect_name(V, feature_names) for V in V_all if len(V) > 0]
+
     # Turn off interactive plot when not calling plt.show
     if show is False:
         plt.ioff()
@@ -186,31 +107,6 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     # support passing an explanation object
     upper_bounds = None
     lower_bounds = None
-    if str(type(expected_value)).endswith("Explanation'>"):
-        shap_exp = expected_value
-        expected_value = shap_exp.expected_value
-        shap_values = shap_exp.values
-        features = shap_exp.data
-        feature_names = shap_exp.feature_names
-        lower_bounds = getattr(shap_exp, "lower_bounds", None)
-        upper_bounds = getattr(shap_exp, "upper_bounds", None)
-
-    # make sure we only have a single output to explain
-    if (type(expected_value) == np.ndarray and len(expected_value) > 0) or type(expected_value) == list:
-        raise Exception("waterfall_plot requires a scalar expected_value of the model output as the first "
-                        "parameter, but you have passed an array as the first parameter! "
-                        "Try shap.waterfall_plot(explainer.expected_value[0], shap_values[0], X[0]) or "
-                        "for multi-output models try "
-                        "shap.waterfall_plot(explainer.expected_value[0], shap_values[0][0], X[0]).")
-
-    # make sure we only have a single explanation to plot
-    if len(shap_values.shape) == 2:
-        raise Exception(
-            "The waterfall_plot can currently only plot a single explanation but a matrix of explanations was passed!")
-
-    # fallback feature names
-    if feature_names is None:
-        feature_names = np.array([labels['FEATURE'] % str(i) for i in range(len(shap_values))])
 
     # init variables we use for tracking the plot locations
     num_features = min(max_display, len(shap_values))
@@ -260,10 +156,8 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         if num_individual != num_features or i + 4 < num_individual:
             plt.plot([loc, loc], [rng[i] - 1 - 0.4, rng[i] + 0.4],
                      color="#bbbbbb", linestyle="--", linewidth=0.5, zorder=-1)
-        if features is None:
-            yticklabels[rng[i]] = feature_names[order[i]]
-        else:
-            yticklabels[rng[i]] = format_value(features[order[i]], "%0.03f") + " = " + feature_names[order[i]]
+        
+        yticklabels[rng[i]] = feature_names[order[i]]
 
     # add a last grouped feature to represent the impact of all the features we didn't show
     if num_features < len(shap_values):
@@ -385,9 +279,11 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         plt.axhline(i, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
     # mark the prior expected value and the model prediction
-    plt.axvline(expected_value, 0, 1/num_features, color="#bbbbbb", linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(expected_value, 0, 1/num_features, color="black", linestyle="--", linewidth=1)
+    plt.text(expected_value, 1.5 * 1/num_features, 'Average', ha='center')
     fx = expected_value + shap_values.sum()
-    plt.axvline(fx, 0, 1, color="#bbbbbb", linestyle="--", linewidth=0.5, zorder=-1)
+    plt.axvline(fx, 0, 1, color="black", linestyle="--", linewidth=1)
+    plt.text(fx, ax.get_ylim()[1], 'Current Prediction', ha='center')
 
     # clean up the main axis
     plt.gca().xaxis.set_ticks_position('bottom')
@@ -396,46 +292,6 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
     plt.gca().spines['top'].set_visible(False)
     plt.gca().spines['left'].set_visible(False)
     ax.tick_params(labelsize=13)
-    #plt.xlabel("\nModel output", fontsize=12)
-
-    # draw the E[f(X)] tick mark
-    xmin, xmax = ax.get_xlim()
-    ax2 = ax.twiny()
-    ax2.set_xlim(xmin, xmax)
-    ax2.set_xticks([expected_value, expected_value])
-    ax2.set_xticklabels(["\n$E[f(X)]$", "\n$ = "+format_value(expected_value, "%0.03f")+"$"], fontsize=12, ha="left")
-    ax2.spines['right'].set_visible(False)
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['left'].set_visible(False)
-
-    # draw the f(x) tick mark
-    ax3 = ax2.twiny()
-    ax3.set_xlim(xmin, xmax)
-    ax3.set_xticks([expected_value + shap_values.sum()] * 2)
-    ax3.set_xticklabels(["$f(x)$", "$ = "+format_value(fx, "%0.03f")+"$"], fontsize=12, ha="left")
-    tick_labels = ax3.xaxis.get_majorticklabels()
-    tick_labels[0].set_transform(tick_labels[0].get_transform(
-    ) + matplotlib.transforms.ScaledTranslation(-10/72., 0, fig.dpi_scale_trans))
-    tick_labels[1].set_transform(tick_labels[1].get_transform(
-    ) + matplotlib.transforms.ScaledTranslation(12/72., 0, fig.dpi_scale_trans))
-    tick_labels[1].set_color("#999999")
-    ax3.spines['right'].set_visible(False)
-    ax3.spines['top'].set_visible(False)
-    ax3.spines['left'].set_visible(False)
-
-    # adjust the position of the E[f(X)] = x.xx label
-    tick_labels = ax2.xaxis.get_majorticklabels()
-    tick_labels[0].set_transform(tick_labels[0].get_transform(
-    ) + matplotlib.transforms.ScaledTranslation(-20/72., 0, fig.dpi_scale_trans))
-    tick_labels[1].set_transform(tick_labels[1].get_transform(
-    ) + matplotlib.transforms.ScaledTranslation(22/72., -1/72., fig.dpi_scale_trans))
-    tick_labels[1].set_color("#999999")
-
-    # color the y tick labels that have the feature values as gray
-    # (these fall behind the black ones with just the feature name)
-    tick_labels = ax.yaxis.get_majorticklabels()
-    for i in range(num_features):
-        tick_labels[i].set_color("#999999")
 
     if show:
         plt.show()
@@ -443,4 +299,12 @@ def waterfall_legacy(expected_value, shap_values=None, features=None, feature_na
         return plt.gcf()
 
 if __name__ == "__main__":
-	waterfall_legacy(2., np.array([1, 2, -3]), np.array([1, 2, 3]), ['A', 'B', 'C'])
+	decomposition = dict()
+	decomposition[()] = 2.43141
+	decomposition[(0,)] = 6.2321
+	decomposition[(1,2)] = -1.23131
+	decomposition[(3,)] = -4.211
+
+	anova_waterfall(decomposition,['A', 'B', 'C', 'D'])
+
+
