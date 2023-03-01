@@ -42,7 +42,7 @@ class GausLogger(object):
 			print(f'R2 (Validation)={round(1 - mse/Y_valid.var().item(), 4)}.')
 			print(f'eta={kernel_params["eta"]}')
 			print(f'c={round(c, 4)}')
-			if kappa.shape[0] <= 100:
+			if kappa.shape[0] < 100:
 				print(f'kappa={kappa}') # TODO: instead report top most important covariates
 
 			# Cache parameters

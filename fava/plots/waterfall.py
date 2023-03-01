@@ -1,11 +1,14 @@
 
+import matplotlib
 import matplotlib.pyplot as plt
+import seaborn as sns
 import matplotlib
 import warnings
 import numpy as np
 import re
 from fava.plots.colors import red_rgb, blue_rgb
 
+sns.set_style('white')
 
 # This code modifies the code from https://github.com/slundberg/shap/blob/master/shap/plots/_waterfall.py
 # to work for ANOVA decompositions instead of SHAP decompositions (copyright below)
@@ -77,6 +80,7 @@ def anova_waterfall(x, decomposer, feature_names, max_display=10, show=True, max
         Whether matplotlib.pyplot.show() is called before returning. Setting this to False allows the plot
         to be customized further after it has been created.
     """
+    matplotlib.rc_file_defaults() # reset to default matplotlib setting
 
     assert len(x.shape) == 1, "Must be a single datapoint!"
     assert x.shape[0] == decomposer.p, "Incorrect covariate dimension!"
@@ -269,7 +273,7 @@ def anova_waterfall(x, decomposer, feature_names, max_display=10, show=True, max
 
     # mark the prior expected value and the model prediction
     plt.axvline(1.01*expected_value, 0, 1/num_features, color="#bbbbbb", linestyle="--", linewidth=1)
-    plt.text(1.01*expected_value, 1.5 * 1/num_features, 'Average')
+    plt.text(1.01*expected_value, 1.5 * 1/num_features, 'Average', ha='left')
     fx = expected_value + anova_values.sum()
     plt.axvline(fx, 0, 1, color="#bbbbbb", linestyle="--", linewidth=1)
     plt.text(fx, ax.get_ylim()[1], 'Current Prediction', ha='center')

@@ -37,18 +37,22 @@ class Decomposer(ABC):
     def get_effect(self, X_feat, V):
         pass
 
-    def get_variation_at_order(self, X, order):
+    def get_variation_at_order(self, X, order, verbose=False):
         err1_msg = f"{X.shape[1]} different than {self.p} input covariates"
         assert X.shape[1] == self.p, err1_msg
         assert order <= self.Q, f"Model fit only contains {self.Q} interactions"
         X_feat = self.featprocessor.transform(X)
         V_order = all_subsets(self.selected_covs, order, False) # TODO: avoid explicity generating all interactions
         variation = jnp.zeros(X_feat.shape[0])
-        for V in tqdm(V_order):
-            variation += self.get_effect(X_feat, list(V))
+        if verbose:
+            for V in tqdm(V_order):
+                variation += self.get_effect(X_feat, list(V))
+        else:
+            for V in V_order:
+                variation += self.get_effect(X_feat, list(V))
         return variation
 
-    def get_variation_at_covariate(self, X, cov_ix):
+    def get_variation_at_covariate(self, X, cov_ix, verbose=False):
         err1_msg = f"{X.shape[1]} different than {self.p} input covariates"
         assert X.shape[1] == self.p, err1_msg
         assert isinstance(cov_ix, int)
@@ -58,8 +62,12 @@ class Decomposer(ABC):
         X_feat = self.featprocessor.transform(X)
         V_all = all_subsets(sorted(list(set(self.selected_covs) - {cov_ix})), self.Q - 1, True)
         variation = jnp.zeros(X_feat.shape[0])
-        for V in tqdm(V_all):
-            variation += self.get_effect(X_feat, sorted(list(V) + [cov_ix]))
+        if verbose:
+            for V in tqdm(V_all):
+                variation += self.get_effect(X_feat, sorted(list(V) + [cov_ix]))
+        else:
+            for V in V_all:
+                variation += self.get_effect(X_feat, sorted(list(V) + [cov_ix]))
         return variation
 
     def get_decomposition(self, X, max_effects=1e4):
