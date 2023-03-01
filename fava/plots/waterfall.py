@@ -50,7 +50,7 @@ def make_effect_name(V, feature_names):
 		V_named = [feature_names[j] for j in V]
 	else:
 		V_named = V
-	return '-'.join(V_named)
+	return ' x '.join(V_named)
 
 
 def anova_waterfall(x, decomposer, feature_names, max_display=10, show=True, max_effects=1e5):
@@ -269,7 +269,7 @@ def anova_waterfall(x, decomposer, feature_names, max_display=10, show=True, max
 
     # mark the prior expected value and the model prediction
     plt.axvline(1.01*expected_value, 0, 1/num_features, color="#bbbbbb", linestyle="--", linewidth=1)
-    plt.text(1.01*expected_value, 1.5 * 1/num_features, 'Average', ha='center')
+    plt.text(1.01*expected_value, 1.5 * 1/num_features, 'Average')
     fx = expected_value + anova_values.sum()
     plt.axvline(fx, 0, 1, color="#bbbbbb", linestyle="--", linewidth=1)
     plt.text(fx, ax.get_ylim()[1], 'Current Prediction', ha='center')

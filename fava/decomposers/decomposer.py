@@ -56,7 +56,7 @@ class Decomposer(ABC):
         assert cov_ix < self.p
         assert self.Q >= 1
         X_feat = self.featprocessor.transform(X)
-        V_all = all_subsets(self.selected_covs - {cov_ix}, self.Q - 1, True)
+        V_all = all_subsets(sorted(list(set(self.selected_covs) - {cov_ix})), self.Q - 1, True)
         variation = jnp.zeros(X_feat.shape[0])
         for V in tqdm(V_all):
             variation += self.get_effect(X_feat, sorted(list(V) + [cov_ix]))
