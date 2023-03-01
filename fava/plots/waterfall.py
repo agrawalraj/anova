@@ -52,7 +52,7 @@ def make_effect_name(V, feature_names):
 	return '-'.join(V_named)
 
 
-def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True, max_effects=1e4):
+def anova_waterfall(x, decomposer, feature_names=None, max_display=10, show=True, max_effects=1e5):
     # Modifies waterfall_legacy function from https://github.com/slundberg/shap/blob/master/shap/plots/_waterfall.py
 
     """ Plots an explanation of a single prediction as a waterfall plot.
@@ -64,11 +64,10 @@ def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True
     in the models exceeds the max_display parameter.
     Parameters
     ----------
-    expected_value : float
-        This is the reference value that the feature contributions start from. For SHAP values it should
-        be the value of explainer.expected_value.
-    shap_values : numpy.array
-        One dimensional array of SHAP values.
+    x : jax.ndarray
+        This is the single datapoint that will be explained.
+    decomposer : Decomposer
+        Generates the functional ANOVA decomposition of a datapoints.
     feature_names : list
         List of feature names (# features).
     max_display : str
@@ -78,26 +77,15 @@ def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True
         to be customized further after it has been created.
     """
 
-    # decomposer 
-    # x_new
+    assert len(x.shape) == 0, "Must be a single datapoint!"
+    assert x.shape[0] == decomposer.p, "Incorrect covariate dimension!"
 
-    # assert len(x.shape) == 0, "Must be a single datapoint!"
-    # assert x.shape[0] == decomposer.p, "Incorrect covariate dimension!"
-
-    # x = x.reshape((1, x.shape[0]))
-
-    # # ---> generates effects
-    # # featnames2
-
-    # expected_value = decomposer.get_variation_at_order(x, 0) # intercept centering
-    # decomposition = decomposer.get_decomposition(x, max_effects=max_effects)
-
-
-    # expected_value, shap_values=None
+    x = x.reshape((1, x.shape[0]))
+    decomposition = decomposer.get_decomposition(x, max_effects=max_effects)
 
     V_all = decomposition.keys()
     expected_value = decomposition[()]
-    shap_values = np.array([decomposition[V] for V in V_all if len(V) > 0]) # Don't include intercept term
+    anova_values = np.array([decomposition[V].item() for V in V_all if len(V) > 0]) # Don't include intercept term
     feature_names = [make_effect_name(V, feature_names) for V in V_all if len(V) > 0]
 
     # Turn off interactive plot when not calling plt.show
@@ -109,10 +97,10 @@ def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True
     lower_bounds = None
 
     # init variables we use for tracking the plot locations
-    num_features = min(max_display, len(shap_values))
+    num_features = min(max_display, len(anova_values))
     row_height = 0.5
     rng = range(num_features - 1, -1, -1)
-    order = np.argsort(-np.abs(shap_values))
+    order = np.argsort(-np.abs(anova_values))
     pos_lefts = []
     pos_inds = []
     pos_widths = []
@@ -123,21 +111,21 @@ def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True
     neg_widths = []
     neg_low = []
     neg_high = []
-    loc = expected_value + shap_values.sum()
+    loc = expected_value + anova_values.sum()
     yticklabels = ["" for i in range(num_features + 1)]
 
     # size the plot based on how many features we are plotting
     plt.gcf().set_size_inches(8, num_features * row_height + 1.5)
 
     # see how many individual (vs. grouped at the end) features we are plotting
-    if num_features == len(shap_values):
+    if num_features == len(anova_values):
         num_individual = num_features
     else:
         num_individual = num_features - 1
 
     # compute the locations of the individual features and plot the dashed connecting lines
     for i in range(num_individual):
-        sval = shap_values[order[i]]
+        sval = anova_values[order[i]]
         loc -= sval
         if sval >= 0:
             pos_inds.append(rng[i])
@@ -160,8 +148,8 @@ def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True
         yticklabels[rng[i]] = feature_names[order[i]]
 
     # add a last grouped feature to represent the impact of all the features we didn't show
-    if num_features < len(shap_values):
-        yticklabels[0] = "%d other features" % (len(shap_values) - num_features + 1)
+    if num_features < len(anova_values):
+        yticklabels[0] = "%d other features" % (len(anova_values) - num_features + 1)
         remaining_impact = expected_value - loc
         if remaining_impact < 0:
             pos_inds.append(0)
@@ -279,10 +267,10 @@ def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True
         plt.axhline(i, color="#cccccc", lw=0.5, dashes=(1, 5), zorder=-1)
 
     # mark the prior expected value and the model prediction
-    plt.axvline(expected_value, 0, 1/num_features, color="black", linestyle="--", linewidth=1)
-    plt.text(expected_value, 1.5 * 1/num_features, 'Average', ha='center')
-    fx = expected_value + shap_values.sum()
-    plt.axvline(fx, 0, 1, color="black", linestyle="--", linewidth=1)
+    plt.axvline(1.01*expected_value, 0, 1/num_features, color="#bbbbbb", linestyle="--", linewidth=1)
+    plt.text(1.01*expected_value, 1.5 * 1/num_features, 'Average', ha='center')
+    fx = expected_value + anova_values.sum()
+    plt.axvline(fx, 0, 1, color="#bbbbbb", linestyle="--", linewidth=1)
     plt.text(fx, ax.get_ylim()[1], 'Current Prediction', ha='center')
 
     # clean up the main axis
@@ -297,14 +285,3 @@ def anova_waterfall(decomposition, feature_names=None, max_display=10, show=True
         plt.show()
     else:
         return plt.gcf()
-
-if __name__ == "__main__":
-	decomposition = dict()
-	decomposition[()] = 2.43141
-	decomposition[(0,)] = 6.2321
-	decomposition[(1,2)] = -1.23131
-	decomposition[(3,)] = -4.211
-
-	anova_waterfall(decomposition,['A', 'B', 'C', 'D'])
-
-
