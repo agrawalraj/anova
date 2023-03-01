@@ -4,7 +4,8 @@ import matplotlib
 import warnings
 import numpy as np
 import re
-from colors import red_rgb, blue_rgb
+from fava.plots.colors import red_rgb, blue_rgb
+
 
 # This code modifies the code from https://github.com/slundberg/shap/blob/master/shap/plots/_waterfall.py
 # to work for ANOVA decompositions instead of SHAP decompositions (copyright below)
@@ -52,7 +53,7 @@ def make_effect_name(V, feature_names):
 	return '-'.join(V_named)
 
 
-def anova_waterfall(x, decomposer, feature_names=None, max_display=10, show=True, max_effects=1e5):
+def anova_waterfall(x, decomposer, feature_names, max_display=10, show=True, max_effects=1e5):
     # Modifies waterfall_legacy function from https://github.com/slundberg/shap/blob/master/shap/plots/_waterfall.py
 
     """ Plots an explanation of a single prediction as a waterfall plot.
@@ -77,14 +78,14 @@ def anova_waterfall(x, decomposer, feature_names=None, max_display=10, show=True
         to be customized further after it has been created.
     """
 
-    assert len(x.shape) == 0, "Must be a single datapoint!"
+    assert len(x.shape) == 1, "Must be a single datapoint!"
     assert x.shape[0] == decomposer.p, "Incorrect covariate dimension!"
 
     x = x.reshape((1, x.shape[0]))
     decomposition = decomposer.get_decomposition(x, max_effects=max_effects)
 
     V_all = decomposition.keys()
-    expected_value = decomposition[()]
+    expected_value = decomposition[()].item()
     anova_values = np.array([decomposition[V].item() for V in V_all if len(V) > 0]) # Don't include intercept term
     feature_names = [make_effect_name(V, feature_names) for V in V_all if len(V) > 0]
 
