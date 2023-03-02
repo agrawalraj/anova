@@ -20,6 +20,14 @@ fava.misc.scheduler module
    :undoc-members:
    :show-inheritance:
 
+fava.misc.synthetic module
+--------------------------
+
+.. automodule:: fava.misc.synthetic
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

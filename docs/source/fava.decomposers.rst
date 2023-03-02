@@ -12,6 +12,14 @@ fava.decomposers.decomposer module
    :undoc-members:
    :show-inheritance:
 
+fava.decomposers.sobol module
+-----------------------------
+
+.. automodule:: fava.decomposers.sobol
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 fava.decomposers.tensor\_product module
 ---------------------------------------
 
