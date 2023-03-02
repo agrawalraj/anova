@@ -1,18 +1,18 @@
-Welcome to Fava's documentation!
+Welcome to FAVA's documentation!
 ===================================
 
-**Fava** is a Python library for performing functional ANOVA decompostions in high-dimensions.
-
-Check out the :doc:`usage` section for further information.
+**FAVA** is a Python library for performing functional ANOVA decompostions in high-dimensions.
 
 .. note::
 
    This project is under active development.
 
-Contents
---------
+Table of Contents
+-----------------
 
 .. toctree::
+   :glob:
+   :maxdepth: 1
 
-   usage
+   tutorials
    modules

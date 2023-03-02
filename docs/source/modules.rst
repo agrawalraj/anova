@@ -1,5 +1,5 @@
-fava
-====
+API
+==============
 
 .. toctree::
    :maxdepth: 4
