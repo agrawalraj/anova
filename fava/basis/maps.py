@@ -157,10 +157,21 @@ class TreeBasis(FiniteDimensionalBasis):
 			return X_feat
 
 
+class SplineBasis(AbstractBasis):
+	def __init__(self, X_train, **kwargs):
+		spline = SplineTransformer(include_bias=False, **kwargs)
+		spline.fit(X_train)
+		self.basis = WrapProcessor(spline)
+		
+	def transform1D(self, X, covariate_ix):
+		return self.basis.transform1D(X, covariate_ix)
+	
+	def transform(self, X):
+		return self.basis.transform(X)
+
+
 class AutoBasis(FiniteDimensionalBasis):
 	def __init__(self, X_train, scale_basis=Identity(), max_basis_dim=10, min_unique_cont=10):
-		# Check each of the types in X_train and predict what type they are
-		# Then create a basis for each type
 		super().__init__(X_train)
 		self.scale_basis = scale_basis
 		self.max_basis_dim = max_basis_dim
@@ -174,6 +185,7 @@ class AutoBasis(FiniteDimensionalBasis):
 			basis, covariate_mask, basis_type = self._get_basis(X_train[:, covariate_ix], covariate_ix)
 			self.basis_list.append(basis)
 			self.covariate_masks.append(covariate_mask)
+			self.basis_types.append(basis_type)
 		self.basis = BasisUnion(self.basis_list, self.covariate_masks)
 	
 	def _get_basis(self, x1d, covariate_ix):
@@ -197,21 +209,6 @@ class AutoBasis(FiniteDimensionalBasis):
 		X = self.scale_basis.transform(X)
 		return self.basis.transform(X)
 
-
-class SplineBasis(AbstractBasis):
-	def __init__(self, X_train, n_knots=5, degree=3, **kwargs):
-		spline = SplineTransformer(
-						degree=degree, 
-			    		n_knots=n_knots, 
-						include_bias=False, **kwargs)
-		spline.fit(X_train)
-		self.basis = WrapProcessor(spline)
-		
-	def transform1D(self, X, covariate_ix):
-		return self.basis.transform1D(X, covariate_ix)
-	
-	def transform(self, X):
-		return self.basis.transform(X)
 
 if __name__	== "__main__":
 	# generate a random dataset
