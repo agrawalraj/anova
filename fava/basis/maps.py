@@ -7,11 +7,23 @@ from sklearn.preprocessing import KBinsDiscretizer, SplineTransformer
 
 
 class WrapProcessor:
-	def __init__(self, processor):
-		self.processor = processor
+	"""
+	Args:
+		preprocessor: sklearn preprocessor
+	Returns:
+		preprocessor: sklearn preprocessor with transform method that returns jax array
+	
+	Example:
+		from sklearn.preprocessing import StandardScaler
+		from fava.basis.maps import WrapProcessor
+		X = np.random.normal(size=(100, 3))
+		preprocessor = WrapProcessor(StandardScaler()).preprocessor
+	"""
+	def __init__(self, preprocessor):
+		self.preprocessor = preprocessor
 
 	def transform(self, X):
-		return jnp.array(self.processor.transform(X))
+		return jnp.array(self.preprocessor.transform(X))
 
 
 class ScaleInput:
@@ -26,6 +38,7 @@ class ScaleInput:
 	def transform(self, X):
 		return self.featscaling.transform(X)
 
+
 class AbstractBasis:
 	def __init__(self, X_train):
 		N_train, p = X_train.shape
@@ -39,11 +52,48 @@ class AbstractBasis:
 		pass
 
 
+def is_valid_mask(covariate_masks):
+	"""
+	Args:
+		covariate_masks: list of boolean jax arrays of length p
+	Returns:
+		bool: True if each covariate is in exactly one basis. Else False.
+	Examples:
+		covariate_masks = [jnp.array([True, False, True]), jnp.array([False, True, False])]
+		is_valid_mask(covariate_masks) = True
+
+		covariate_masks = [jnp.array([True, False, True]), jnp.array([False, True, True])]
+		is_valid_mask(covariate_masks) = False
+	"""
+	# Each covariate must be in exactly one basis
+	for cov_ix in range(len(covariate_masks[0])):
+		if sum([covariate_mask[cov_ix] for covariate_mask in covariate_masks]).item() != 1:
+			return False
+	return True
+
+
+def covariate2basis(covariate_masks):
+	"""
+	Args:
+		covariate_masks: list of boolean jax arrays of length p
+	Returns:
+		dict: covariate_ix -> basis_ix
+	Example:
+		covariate_masks = [jnp.array([True, False, True]), jnp.array([False, True, False])]
+		covariate2basis(covariate_masks) = {0: 0, 1: 1, 2: 0}
+	"""
+	covariate2basis = {}
+	for basis_ix, covariate_mask in enumerate(covariate_masks):
+		for cov_ix in jnp.where(covariate_mask)[0].tolist():
+			covariate2basis[cov_ix] = basis_ix
+	return covariate2basis
+
+
 class BasisUnion(AbstractBasis):
 	def __init__(self, basis_list, covariate_masks):
 		assert is_valid_mask(covariate_masks), "Invalid covariate masks"
-		self.covariate2basis = 0 # TODO ADD THIS
-		self.max_basis_dim = max([basis.max_basis_dim for basis in self.basis_list])
+		self.covariate2basis = covariate2basis(covariate_masks)
+		self.max_basis_dim = max([basis.max_basis_dim for basis in basis_list])
 		self.basis_list = basis_list
 		self.covariate_masks = covariate_masks
 
@@ -55,8 +105,8 @@ class BasisUnion(AbstractBasis):
 		N, p = X.shape
 		X_feat = jnp.zeros((N, p, self.max_basis_dim))
 		for basis, covariate_mask in zip(self.basis_list, self.covariate_masks):
-			# Zero pad to match the last basis dimension
-			X_feat[:, covariate_mask, :] = basis.transform(X[:, covariate_mask])
+			# Update X_feat with zero padding (if necessary)
+			X_feat = X_feat.at[:, covariate_mask, :].set(jnp.pad(basis.transform(X[:, covariate_mask]), ((0, 0), (0, 0), (0, self.max_basis_dim - basis.max_basis_dim))))
 		return X_feat
 
 
@@ -156,7 +206,7 @@ class TreeBasis(FiniteDimensionalBasis):
 			return X_feat
 
 
-class SplineBasis(RepeatedFiniteBasis):
+class SplineBasis(FiniteDimensionalBasis):
 	"""
 	Args:
 		X_train: Jax ndarray of shape (N, p)
@@ -169,6 +219,8 @@ class SplineBasis(RepeatedFiniteBasis):
 		spline = SplineBasis(X_train, n_knots=10, degree=3)
 	"""
 	def __init__(self, X_train, **kwargs):
+		assert X_train.ndim == 2, "X_train must be 2D"
+		super().__init__(X_train)
 		spline = SplineTransformer(**kwargs)
 		X_feat = jnp.array(spline.fit_transform(X_train))
 		X_feat = X_feat.reshape((X_train.shape[0], X_train.shape[1], -1))
@@ -192,20 +244,22 @@ class AutoBasis(FiniteDimensionalBasis):
 	def __init__(self, X_train, scale_input=Identity(), min_unique_cont=10, **kwargs):
 		super().__init__(X_train)
 		self.scale_input = scale_input
-		self.max_basis_dim = max_basis_dim
 		self.min_unique_cont = min_unique_cont
 		X_train = self.scale_input.transform(X_train)
 		assert X_train.shape[1] == self.p, "Scaling must not change the number of input features"
-		self.basis_list = []
-		self.covariate_masks = []
-		n_unique_by_covariate = [len(set(X_train[:, covariate_ix])) for covariate_ix in range(self.p)]
+		n_unique_by_covariate = [len(set(X_train[:, covariate_ix].tolist())) for covariate_ix in range(self.p)]
 		self.basis_types = ['categorical' if n_unique < self.min_unique_cont else 'continuous' for n_unique in n_unique_by_covariate]
-		continuous_mask = [basis_type == 'continuous' for basis_type in self.basis_types]
-		categorical_mask = [basis_type == 'categorical' for basis_type in self.basis_types]
-		covariate_masks = [continuous_mask, categorical_mask]
-		continuous_basis = SplineBasis(X_train[:, continuous_mask], **kwargs)
-		categorical_basis = LinearBasis(X_train[:, categorical_mask])
-		self.basis_list = [continuous_basis, categorical_basis]
+		continuous_mask = jnp.array([basis_type == 'continuous' for basis_type in self.basis_types])
+		categorical_mask = jnp.array([basis_type == 'categorical' for basis_type in self.basis_types])
+		self.covariate_masks = []
+		self.basis_list = []
+		if jnp.any(continuous_mask).item():
+			self.covariate_masks.append(continuous_mask)
+			self.basis_list.append(SplineBasis(X_train[:, continuous_mask], **kwargs))
+		if jnp.any(categorical_mask).item():
+			self.covariate_masks.append(categorical_mask)
+			self.basis_list.append(LinearBasis(X_train[:, categorical_mask]))
+		self.max_basis_dim = max([basis.max_basis_dim for basis in self.basis_list])
 		self.basis = BasisUnion(self.basis_list, self.covariate_masks)
 	
 	def transform1D(self, X, covariate_ix):
@@ -227,5 +281,20 @@ if __name__	== "__main__":
 	basis = SplineBasis(X)
 	# transform the data
 	X_feat = basis.transform(X)
-	print(X_feat)
+	basis.transform1D(X, 0)
+	# print(X_feat)
+	# print(X_feat.shape)
+
+	# Add a binary covariate to X
+	X = np.random.randn(N, p)
+	X = np.hstack((X, np.random.binomial(1, 0.5, size=(N, 1))))
+	X = jnp.array(X)
+	# create a basis
+	basis = AutoBasis(X)
+	# transform the data
+	X_feat = basis.transform(X)
+	# print(X_feat)
 	print(X_feat.shape)
+	# print(X_feat[:, 2, :])
+	# print('\n')
+	# print((X[:, 2] - X[:, 2].mean()) / X[:, 2].std())
