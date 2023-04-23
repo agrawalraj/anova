@@ -8,15 +8,23 @@ from sklearn.preprocessing import KBinsDiscretizer, SplineTransformer
 
 class WrapProcessor:
 	def __init__(self, processor):
-		# TODO: check that processor is a valid processor
 		self.processor = processor
-
-	def transform1D(self, X, covariate_ix):
-		return jnp.array(self.processor.transform1D(X[:, covariate_ix]))
 
 	def transform(self, X):
 		return jnp.array(self.processor.transform(X))
 
+
+class ScaleInput:
+	def __init__(self, X_train, featscaling):
+		self.featscaling = featscaling.fit(X_train)
+
+	def transform1D(self, X, covariate_ix):
+		assert covariate_ix >= 0
+		assert covariate_ix < self.p, f"{covariate_ix} not in range({self.p})"
+		return self.featscaling.transform(X)[:, covariate_ix]
+
+	def transform(self, X):
+		return self.featscaling.transform(X)
 
 class AbstractBasis:
 	def __init__(self, X_train):
@@ -47,26 +55,12 @@ class BasisUnion(AbstractBasis):
 		N, p = X.shape
 		X_feat = jnp.zeros((N, p, self.max_basis_dim))
 		for basis, covariate_mask in zip(self.basis_list, self.covariate_masks):
-			# TODO: fix array update
-			# Need to zero pad the basis dimension
+			# Zero pad to match the last basis dimension
 			X_feat[:, covariate_mask, :] = basis.transform(X[:, covariate_mask])
 		return X_feat
 
 
-class ScaleInputBasis(AbstractBasis):
-	def __init__(self, X_train, featscaling):
-		self.featscaling = featscaling.fit(X_train)
-		self.max_basis_dim = 1
-
-	def transform1D(self, X, covariate_ix):
-		assert covariate_ix >= 0
-		assert covariate_ix < self.p, f"{covariate_ix} not in range({self.p})"
-		return self.featscaling.transform(X)[:, covariate_ix]
-
-	def transform(self, X):
-		return self.featscaling.transform(X)
-
-
+# TODO: fix this
 class Identity(AbstractBasis):
 	def __init__(self):
 		self.max_basis_dim = 1
@@ -84,7 +78,8 @@ class FiniteDimensionalBasis(AbstractBasis):
 
 	def transform(self, X):
 		p = self.p
-		return jnp.concat([self.transform1D(X[:, covariate_ix]) for covariate_ix in range(p)])
+		# 0 pad to match the last basis dimension
+		X_feat = jnp.zeros((self.N_train, p, self.max_basis_dim))
 
 
 class LinearBasis(FiniteDimensionalBasis):
@@ -92,11 +87,12 @@ class LinearBasis(FiniteDimensionalBasis):
 		super().__init__(X_train)
 		self._mean = X_train.mean(axis=0)
 		self._sd = X_train.std(axis=0)
+		self.max_basis_dim = 1
 
 	def transform1D(self, X, covariate_ix):
 		assert covariate_ix >= 0
 		assert covariate_ix < self.p, f"{covariate_ix} not in range({self.p})"
-		return X[:, covariate_ix] - self._mean[covariate_ix]
+		return (X[:, covariate_ix] - self._mean[covariate_ix]).reshape((-1, 1)) / self._sd[covariate_ix]
 	
 	def transform(self, X):
 		N, p = X.shape
@@ -105,25 +101,28 @@ class LinearBasis(FiniteDimensionalBasis):
 
 
 class RepeatedFiniteBasis(FiniteDimensionalBasis):
-	def __init__(self, X_train, basis1d, scale_basis=Identity()):
+	def __init__(self, X_train, basis1d, scale_input=Identity()):
 		super().__init__(X_train)
 		self.basis1d = basis1d
 		self.basis_mapped = vmap(basis1d)
-		self.scale_basis = scale_basis
-		X_train = self.scale_basis.transform(X_train)
+		self.scale_input = scale_input
+		X_train = self.scale_input.transform(X_train)
 		assert X_train.shape[1] == self.p, "Scaling must not change the number of input features"
 		X_feat = jnp.transpose(self.basis_mapped(X_train), axes=(0, 2, 1))
 		self.max_basis_dim = X_feat.shape[2]
 		self._basis_mean = X_feat.mean(axis=0)
 		self._basis_sd = X_feat.std(axis=0)
 
-	def transform1D(self, X, covariate_ix):
-		x = self.scale_basis.transform1D(X, covariate_ix)
+	def transform1D(self, X, covariate_ix, normalize=True):
+		x = self.scale_input.transform1D(X, covariate_ix)
 		x = self.basis1d(x)
-		return (x - self._basis_mean[covariate_ix]) / self._basis_sd[covariate_ix]
+		if normalize:
+			return (x - self._basis_mean[covariate_ix, :]) / self._basis_sd[covariate_ix, :]
+		else:
+			return x
 
 	def transform(self, X, normalize=True):
-		X_feat = self.scale_basis.transform(X)
+		X_feat = self.scale_input.transform(X)
 		X_feat = jnp.transpose(self.basis_mapped(X_feat), axes=(0, 2, 1))
 		if normalize:
 			return (X_feat - self._basis_mean) / self._basis_sd
@@ -157,56 +156,64 @@ class TreeBasis(FiniteDimensionalBasis):
 			return X_feat
 
 
-class SplineBasis(AbstractBasis):
-	def __init__(self, X_train, **kwargs):
-		spline = SplineTransformer(include_bias=False, **kwargs)
-		spline.fit(X_train)
-		self.basis = WrapProcessor(spline)
-		
-	def transform1D(self, X, covariate_ix):
-		return self.basis.transform1D(X, covariate_ix)
+class SplineBasis(RepeatedFiniteBasis):
+	"""
+	Args:
+		X_train: Jax ndarray of shape (N, p)
+		kwargs: Arguments passed to SplineTransformer
 	
-	def transform(self, X):
-		return self.basis.transform(X)
+	Returns:
+		SplineBasis object
+
+	Example:
+		spline = SplineBasis(X_train, n_knots=10, degree=3)
+	"""
+	def __init__(self, X_train, **kwargs):
+		spline = SplineTransformer(**kwargs)
+		X_feat = jnp.array(spline.fit_transform(X_train))
+		X_feat = X_feat.reshape((X_train.shape[0], X_train.shape[1], -1))
+		self.basis = WrapProcessor(spline)
+		self.max_basis_dim = X_feat.shape[2]
+		self._basis_mean = X_feat.mean(axis=0)
+		self._basis_sd = X_feat.std(axis=0)
+		
+	def transform1D(self, X, covariate_ix, normalize=True):
+		return self.transform(X, normalize)[:, covariate_ix, :]
+
+	def transform(self, X, normalize=True):
+		X_feat = self.basis.transform(X).reshape((X.shape[0], self.p, self.max_basis_dim))
+		if normalize:
+			return (X_feat - self._basis_mean) / self._basis_sd
+		else:
+			return X_feat
 
 
 class AutoBasis(FiniteDimensionalBasis):
-	def __init__(self, X_train, scale_basis=Identity(), max_basis_dim=10, min_unique_cont=10):
+	def __init__(self, X_train, scale_input=Identity(), min_unique_cont=10, **kwargs):
 		super().__init__(X_train)
-		self.scale_basis = scale_basis
+		self.scale_input = scale_input
 		self.max_basis_dim = max_basis_dim
 		self.min_unique_cont = min_unique_cont
-		X_train = self.scale_basis.transform(X_train)
+		X_train = self.scale_input.transform(X_train)
 		assert X_train.shape[1] == self.p, "Scaling must not change the number of input features"
 		self.basis_list = []
 		self.covariate_masks = []
-		self.basis_types = []
-		for covariate_ix in range(self.p):
-			basis, covariate_mask, basis_type = self._get_basis(X_train[:, covariate_ix], covariate_ix)
-			self.basis_list.append(basis)
-			self.covariate_masks.append(covariate_mask)
-			self.basis_types.append(basis_type)
+		n_unique_by_covariate = [len(set(X_train[:, covariate_ix])) for covariate_ix in range(self.p)]
+		self.basis_types = ['categorical' if n_unique < self.min_unique_cont else 'continuous' for n_unique in n_unique_by_covariate]
+		continuous_mask = [basis_type == 'continuous' for basis_type in self.basis_types]
+		categorical_mask = [basis_type == 'categorical' for basis_type in self.basis_types]
+		covariate_masks = [continuous_mask, categorical_mask]
+		continuous_basis = SplineBasis(X_train[:, continuous_mask], **kwargs)
+		categorical_basis = LinearBasis(X_train[:, categorical_mask])
+		self.basis_list = [continuous_basis, categorical_basis]
 		self.basis = BasisUnion(self.basis_list, self.covariate_masks)
 	
-	def _get_basis(self, x1d, covariate_ix):
-		covariate_mask = jnp.zeros(self.p)
-		covariate_mask[covariate_ix] = 1
-		if len(set(x1d)) < self.min_unique_cont: # X is categorical
-			basis_type = "categorical"
-			basis = LinearBasis(x1d.reshape(-1, 1))
-			# Do linear basis
-		else: # X is continuous
-			# power basis (trend) + wavelet basis (seasonality)
-			basis_type = "continuous"
-
-		return basis, covariate_mask, basis_type 
-
 	def transform1D(self, X, covariate_ix):
-		x = self.scale_basis.transform1D(X, covariate_ix)
-		return self.basis_list[covariate_ix].transform1D(x, 0)
+		X = self.scale_input.transform(X)
+		return self.basis.transform1D(X, covariate_ix)
 	
 	def transform(self, X):
-		X = self.scale_basis.transform(X)
+		X = self.scale_input.transform(X)
 		return self.basis.transform(X)
 
 
